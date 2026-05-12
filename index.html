@@ -184,6 +184,38 @@
     .summary-chip.warn{background:#fff7ed;color:#c2410c;border-color:#fed7aa;}
     .summary-chip.danger{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
 
+
+    /* ====== 維護歷程 Drawer ====== */
+    #historyDrawer{max-width:780px;}
+    .history-meta-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
+    .history-meta-item{font-size:.82rem;color:var(--text-muted);}
+    .history-meta-item strong{color:var(--text-main);}
+    .timeline{display:flex;flex-direction:column;gap:0;}
+    .tl-item{display:flex;gap:0;position:relative;}
+    .tl-left{display:flex;flex-direction:column;align-items:center;width:48px;flex-shrink:0;}
+    .tl-dot{width:14px;height:14px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 2px currentColor;flex-shrink:0;margin-top:4px;z-index:1;}
+    .tl-dot.done{color:var(--success);}
+    .tl-dot.deferred{color:var(--warning);}
+    .tl-dot.pending{color:var(--border);}
+    .tl-dot.overdue{color:var(--danger);}
+    .tl-line{width:2px;background:var(--border);flex:1;margin-top:2px;}
+    .tl-item:last-child .tl-line{display:none;}
+    .tl-right{flex:1;padding-bottom:20px;}
+    .tl-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+    .tl-ym{font-weight:700;font-size:.95rem;color:var(--text-main);}
+    .tl-badge{padding:2px 8px;border-radius:10px;font-size:.72rem;font-weight:700;}
+    .tl-badge.done{background:var(--success-light);color:var(--success-dark);}
+    .tl-badge.deferred{background:#fef3c7;color:#b45309;}
+    .tl-badge.pending{background:#f1f5f9;color:var(--text-muted);}
+    .tl-badge.overdue{background:#fee2e2;color:#991b1b;}
+    .tl-detail{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:.85rem;display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;}
+    .tl-detail-row{display:contents;}
+    .tl-detail-label{color:var(--text-muted);font-weight:500;}
+    .tl-detail-val{color:var(--text-main);font-weight:600;}
+    .tl-deferred-reason{grid-column:1/-1;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;color:#92400e;font-size:.82rem;margin-top:4px;white-space:pre-wrap;line-height:1.6;}
+    .history-empty{text-align:center;padding:40px 0;color:var(--text-muted);}
+    .tl-service-icon{font-size:14px;color:var(--text-muted);}
+
   </style>
 </head>
 <body>
@@ -321,13 +353,38 @@
   </main>
 </div>
 
+
+<!-- ====== 維護歷程 Drawer ====== -->
+<div class="drawer" id="historyDrawer">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+    <div>
+      <h2 style="margin:0;font-size:1.1rem;">維護歷程</h2>
+      <div id="historySubtitle" style="font-size:.82rem;color:var(--text-muted);margin-top:2px;"></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <button class="btn btn-outline" id="historyDownloadBtn" onclick="downloadHistoryCsv()" style="font-size:.82rem;padding:6px 12px;">
+        <span class="material-symbols-rounded" style="font-size:16px;">download</span>下載 CSV
+      </button>
+      <button class="btn btn-outline" style="padding:5px;border-radius:50%;" onclick="closeHistoryDrawer()">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+  </div>
+  <!-- 客戶資訊摘要列 -->
+  <div class="history-meta-bar" id="historyMetaBar"></div>
+  <!-- 統計小卡 -->
+  <div id="historyStatRow" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.25rem;"></div>
+  <!-- 時間軸 -->
+  <div id="historyTimeline" class="timeline"></div>
+</div>
+
 <div class="overlay" id="overlay" onclick="closeAllDrawers()"></div>
 
 <!-- 主要 Drawer -->
 <div class="drawer" id="drawer">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
     <h2 id="drawerTitle" style="margin:0">維護編輯</h2>
-    <button class="btn btn-outline" style="padding:5px;border-radius:50%" onclick="closeDrawer()"><span class="material-symbols-rounded">close</span></button>
+    <button class="btn btn-outline" style="padding:5px;border-radius:50%" onclick="closeDrawer();closeHistoryDrawer();closeOpLog();closeUserMgr();"><span class="material-symbols-rounded">close</span></button>
   </div>
   <form id="formEdit">
     <div id="maintenanceFields">
@@ -504,6 +561,7 @@ let currentUser=null;
 let adminUser=null;  // 變身模式下保存原始管理者身份
 let records=[],systemLogs=[],allProducts=[],allUsers=[],allOpLogs=[];
 let editingId=null,editingLogVersion=null,editingUsername=null;
+let currentHistoryId=null;
 let modalTarget=null,editingYMList=[],endDateManual=false;
 let quill=null,logQuill=null;
 let currentBranchFilter="KH";
@@ -856,6 +914,7 @@ function render(){
         <td><div style="display:flex;gap:5px;justify-content:flex-end;">
           ${sch&&canToggle?`<button class="btn btn-outline" type="button" style="padding:3px${sch&&sch.isDeferred?';border-color:#f59e0b;':''}" title="${sch.isDone?'取消完工':sch.isDeferred?'取消暫緩':'完工申報'}" onclick="toggleDone('${r.id}','${ym}')"><span class="material-symbols-rounded" style="font-size:17px;${sch.isDeferred?'color:#f59e0b;':''}">${sch.isDone?'history':sch.isDeferred?'undo':'done'}</span></button>`:''}
           ${isOwner&&!isEngineer()?`<button class="btn btn-outline" type="button" style="padding:3px" onclick="openEdit('${r.id}')"><span class="material-symbols-rounded" style="font-size:17px;">edit</span></button>`:''}
+          <button class="btn btn-outline" type="button" style="padding:3px" title="維護歷程" onclick="openHistory('${r.id}')"><span class="material-symbols-rounded" style="font-size:17px;">history</span></button>
         </div></td>
       </tr>`);
   });
@@ -905,6 +964,11 @@ function openEdit(id=null,forceReadOnly=false){
   document.getElementById('overlay').style.display='block';
 }
 
+function closeHistoryDrawer(){
+  document.getElementById('historyDrawer').classList.remove('open');
+  document.getElementById('overlay').style.display='none';
+  currentHistoryId=null;
+}
 function closeDrawer(){
   document.getElementById('drawer').classList.remove('open');
   document.getElementById('overlay').style.display='none';
@@ -1567,6 +1631,162 @@ function renderTrendChart(data) {
   });
 }
 // ====== 統計分析結束 ======
+
+
+// ====== 維護歷程 ======
+
+const SERVICE_TYPE_LABEL = {
+  remote:   '🖥️ 遠端維護',
+  onsite:   '📍 到場維護',
+  deferred: '⏸️ 暫緩'
+};
+
+function openHistory(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  currentHistoryId = id;
+
+  // 副標題
+  document.getElementById('historySubtitle').textContent =
+    r.customer + (r.product ? '　｜　' + r.product : '');
+
+  // 客戶資訊摘要
+  const metaBar = document.getElementById('historyMetaBar');
+  const branchLabel = r.branch === 'TN' ? '台南' : '高雄';
+  metaBar.innerHTML = `
+    <div class="history-meta-item"><span style="color:var(--text-muted);">分公司：</span><strong>${branchLabel}</strong></div>
+    <div class="history-meta-item">｜</div>
+    <div class="history-meta-item"><span style="color:var(--text-muted);">業務：</span><strong>${r.salesName || '-'}</strong></div>
+    <div class="history-meta-item">｜</div>
+    <div class="history-meta-item"><span style="color:var(--text-muted);">負責工程師：</span><strong>${r.engineer || '-'}</strong></div>
+    <div class="history-meta-item">｜</div>
+    <div class="history-meta-item"><span style="color:var(--text-muted);">合約期間：</span><strong>${r.startDate} ～ ${r.endDate}</strong></div>`;
+
+  // 統計小卡
+  const sch = r.schedule || [];
+  const todayYM = new Date().toISOString().slice(0, 7);
+  const doneCount     = sch.filter(s => s.isDone).length;
+  const deferredCount = sch.filter(s => s.isDeferred).length;
+  const overdueCount  = sch.filter(s => !s.isDone && !s.isDeferred && s.ym < todayYM).length;
+  const pendingCount  = sch.filter(s => !s.isDone && !s.isDeferred && s.ym >= todayYM).length;
+  const total         = sch.length;
+  const rate          = total > 0 ? Math.round(doneCount / total * 100) : 0;
+
+  const statCards = [
+    { label:'總維護月份', value: total,         color:'var(--primary)',  bg:'var(--primary-light)' },
+    { label:'已完工',     value: doneCount,      color:'var(--success)',  bg:'var(--success-light)' },
+    { label:'暫緩',       value: deferredCount,  color:'#b45309',         bg:'#fef3c7' },
+    { label:'逾期未維護', value: overdueCount,   color:'var(--danger)',   bg:'#fee2e2' },
+    { label:'待執行',     value: pendingCount,   color:'var(--text-muted)', bg:'#f1f5f9' },
+    { label:'完工率',     value: rate + '%',     color:'#065f46',         bg:'#d1fae5' },
+  ];
+  document.getElementById('historyStatRow').innerHTML = statCards.map(c =>
+    `<div style="background:${c.bg};border-radius:10px;padding:10px 14px;min-width:80px;text-align:center;">
+      <div style="font-size:1.4rem;font-weight:800;color:${c.color};">${c.value}</div>
+      <div style="font-size:.72rem;color:${c.color};font-weight:600;margin-top:2px;">${c.label}</div>
+    </div>`).join('');
+
+  // 時間軸
+  renderHistoryTimeline(r);
+
+  document.getElementById('historyDrawer').classList.add('open');
+  document.getElementById('overlay').style.display = 'block';
+}
+
+function renderHistoryTimeline(r) {
+  const sch = (r.schedule || []).slice().sort((a, b) => a.ym.localeCompare(b.ym));
+  const todayYM = new Date().toISOString().slice(0, 7);
+  const tl = document.getElementById('historyTimeline');
+
+  if (!sch.length) {
+    tl.innerHTML = '<div class="history-empty"><span class="material-symbols-rounded" style="font-size:40px;display:block;margin-bottom:8px;color:#cbd5e1;">calendar_month</span>尚無維護月份記錄</div>';
+    return;
+  }
+
+  tl.innerHTML = sch.map(s => {
+    let status, dotClass, badgeClass, badgeText;
+    if (s.isDone) {
+      status = 'done'; dotClass = 'done'; badgeClass = 'done'; badgeText = '✅ 已完工';
+    } else if (s.isDeferred) {
+      status = 'deferred'; dotClass = 'deferred'; badgeClass = 'deferred'; badgeText = '⏸ 暫緩';
+    } else if (s.ym < todayYM) {
+      status = 'overdue'; dotClass = 'overdue'; badgeClass = 'overdue'; badgeText = '⚠️ 逾期未完工';
+    } else {
+      status = 'pending'; dotClass = 'pending'; badgeClass = 'pending'; badgeText = '待執行';
+    }
+
+    const ymDisplay = s.ym.slice(0, 4) + ' 年 ' + parseInt(s.ym.slice(5)) + ' 月';
+
+    let detailRows = '';
+    if (s.isDone) {
+      const stLabel = SERVICE_TYPE_LABEL[s.serviceType] || s.serviceType || '-';
+      detailRows += `
+        <div class="tl-detail-row"><span class="tl-detail-label">完工日期</span><span class="tl-detail-val">${s.doneDate || '-'}</span></div>
+        <div class="tl-detail-row"><span class="tl-detail-label">執行工程師</span><span class="tl-detail-val">${s.engName || r.engineer || '-'}</span></div>
+        <div class="tl-detail-row"><span class="tl-detail-label">服務方式</span><span class="tl-detail-val">${stLabel}</span></div>`;
+    } else if (s.isDeferred) {
+      detailRows += `
+        <div class="tl-detail-row"><span class="tl-detail-label">暫緩記錄人</span><span class="tl-detail-val">${s.engName || r.engineer || '-'}</span></div>`;
+      if (s.deferredReason && s.deferredReason.trim()) {
+        detailRows += `<div style="grid-column:1/-1;"><div class="tl-deferred-reason">📝 暫緩說明：${s.deferredReason}</div></div>`;
+      }
+    }
+
+    const detailHtml = detailRows ? `<div class="tl-detail">${detailRows}</div>` : '';
+
+    return `<div class="tl-item">
+      <div class="tl-left">
+        <div class="tl-dot ${dotClass}" style="background:${status==='done'?'var(--success)':status==='deferred'?'var(--warning)':status==='overdue'?'var(--danger)':'#e2e8f0'};border-color:#fff;"></div>
+        <div class="tl-line"></div>
+      </div>
+      <div class="tl-right">
+        <div class="tl-header">
+          <span class="tl-ym">${ymDisplay}</span>
+          <span class="tl-badge ${badgeClass}">${badgeText}</span>
+        </div>
+        ${detailHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function downloadHistoryCsv() {
+  const r = records.find(x => x.id === currentHistoryId);
+  if (!r) return;
+  const sch = (r.schedule || []).slice().sort((a, b) => a.ym.localeCompare(b.ym));
+  const todayYM = new Date().toISOString().slice(0, 7);
+
+  const headers = ['客戶名稱','產品','業務','負責工程師','合約起日','合約訖日','維護月份','狀態','完工日期','執行工程師','服務方式','暫緩說明'];
+  const rows = sch.map(s => {
+    let status;
+    if      (s.isDone)      status = '已完工';
+    else if (s.isDeferred)  status = '暫緩';
+    else if (s.ym < todayYM) status = '逾期未完工';
+    else                    status = '待執行';
+    const stLabel = s.serviceType === 'remote' ? '遠端' : s.serviceType === 'onsite' ? '到場' : s.serviceType === 'deferred' ? '暫緩' : '-';
+    return [
+      r.customer, r.product, r.salesName, r.engineer,
+      r.startDate, r.endDate,
+      s.ym,
+      status,
+      s.doneDate  || '-',
+      s.engName   || (s.isDone ? r.engineer : '-'),
+      s.isDone    ? stLabel : '-',
+      s.deferredReason || '-'
+    ].map(v => '"' + String(v || '').replace(/"/g, '""') + '"');
+  });
+
+  const bom   = '﻿';
+  const csv   = bom + [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob  = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url   = URL.createObjectURL(blob);
+  const a     = document.createElement('a');
+  a.href      = url;
+  a.download  = `維護歷程_${r.customer}_${r.product}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+// ====== 維護歷程結束 ======
 
 // ====== 初始化 ======
 document.addEventListener('DOMContentLoaded',()=>{
