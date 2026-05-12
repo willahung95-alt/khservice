@@ -31,6 +31,11 @@
     .login-field input{width:100%;padding:11px 40px 11px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:1rem;outline:none;transition:.2s;}
     .login-field input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(67,97,238,.12);}
     .eye-btn{position:absolute;right:10px;cursor:pointer;color:var(--text-muted);user-select:none;font-size:20px;}
+    /* 壓制各瀏覽器原生密碼顯示按鈕，避免與自訂眼睛重疊 */
+    #loginPwd::-ms-reveal,#loginPwd::-ms-clear{display:none;}
+    #loginPwd::-webkit-credentials-auto-fill-button,
+    #loginPwd::-webkit-strong-password-auto-fill-button{display:none !important;visibility:hidden;pointer-events:none;}
+    @keyframes spin{to{transform:rotate(360deg);}}
     .login-err{color:var(--danger);font-size:.83rem;margin-bottom:.8rem;text-align:center;min-height:20px;}
     .login-btn{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;transition:.2s;}
     .login-btn:hover{background:#3451d1;}
@@ -81,6 +86,7 @@
     .month-group{display:flex;flex-wrap:wrap;gap:2px;}
     .month-chip{padding:2px 3px;border-radius:3px;font-size:10px;background:#f1f5f9;color:var(--text-muted);border:1px solid var(--border);min-width:28px;text-align:center;}
     .month-chip.is-done{background:var(--success-light);color:var(--success-dark);border-color:#a7f3d0;}
+    .month-chip.is-deferred{background:#fef3c7;color:#b45309;border-color:#fcd34d;}
     .month-chip.active{border:1.5px solid var(--primary);font-weight:700;color:var(--primary);background:#fff;}
     .done-status-box{background:var(--success-light);color:var(--success-dark);padding:5px 10px;border-radius:8px;display:inline-flex;flex-direction:column;border:1px solid #c6f6d5;min-width:95px;}
     .done-status-box .status-title{font-size:.9rem;font-weight:800;display:flex;align-items:center;gap:3px;}
@@ -191,7 +197,7 @@
     <div class="login-field"><label>帳號</label><div class="input-wrap"><input type="text" id="loginUser" placeholder="請輸入帳號" autocomplete="username"></div></div>
     <div class="login-field"><label>密碼</label>
       <div class="input-wrap">
-        <input type="password" id="loginPwd" placeholder="請輸入密碼" autocomplete="current-password">
+        <input type="password" id="loginPwd" placeholder="請輸入密碼" autocomplete="current-password" style="-webkit-text-security:disc;">
         <span class="material-symbols-rounded eye-btn" id="eyeBtn" onclick="toggleLoginEye()">visibility</span>
       </div>
     </div>
@@ -222,6 +228,7 @@
         <span class="material-symbols-rounded" style="font-size:18px;">person</span>
         <span id="userBadgeName">-</span>
         <span class="role-chip" id="userBadgeRole">-</span>
+        <button class="btn btn-outline" style="padding:3px 8px;font-size:.78rem;" onclick="refreshData()" id="btnRefresh" title="載入最新資料"><span class="material-symbols-rounded" style="font-size:15px;vertical-align:middle;" id="refreshIcon">refresh</span> 重新整理</button>
         <button class="btn btn-outline" style="padding:3px 8px;font-size:.78rem;" onclick="openChangePwd()"><span class="material-symbols-rounded" style="font-size:14px;">lock_reset</span>改密碼</button>
         <button class="btn btn-outline" style="padding:3px 8px;font-size:.78rem;" onclick="adminUser?exitImpersonate():doLogout()">登出</button>
       </div>
@@ -277,6 +284,7 @@
       <div class="stat-card"><div class="stat-icon" style="background:#eef2ff;color:var(--primary);"><span class="material-symbols-rounded">groups</span></div><div class="stat-info"><div class="stat-label">總客戶數</div><div class="stat-value" id="statTotal">0</div></div></div>
       <div class="stat-card"><div class="stat-icon" style="background:var(--success-light);color:var(--success);"><span class="material-symbols-rounded">check_circle</span></div><div class="stat-info"><div class="stat-label">本月已完工</div><div class="stat-value" id="statDone">0</div></div></div>
       <div class="stat-card"><div class="stat-icon" style="background:#fff7ed;color:var(--warning);"><span class="material-symbols-rounded">pending_actions</span></div><div class="stat-info"><div class="stat-label">本月待處理</div><div class="stat-value" id="statTodo">0</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#fffbeb;color:#d97706;"><span class="material-symbols-rounded">pause_circle</span></div><div class="stat-info"><div class="stat-label">本月暫緩</div><div class="stat-value" id="statDeferred">0</div></div></div>
       <div class="stat-card"><div class="stat-icon" style="background:#f0fdf4;color:#15803d;"><span class="material-symbols-rounded">query_stats</span></div><div class="stat-info"><div class="stat-label">本月達成率</div><div class="stat-value" id="statRate">0%</div></div></div>
     </div>
 
@@ -290,6 +298,7 @@
       <!-- ★ 修正2：預設文字改為「全部工程師」 -->
       <select id="filterEngineer" class="btn btn-outline" style="display:none;" onchange="render()"><option value="">全部工程師</option></select>
       <select id="filterSales" class="btn btn-outline" style="display:none;" onchange="render()"><option value="">全部業務</option></select>
+      <select id="filterProduct" class="btn btn-outline" onchange="render()"><option value="">全部產品線</option></select>
       <select id="branchFilter" class="btn btn-outline" style="display:none;" onchange="onBranchFilterChange()">
         <option value="ALL">全部分公司</option><option value="KH">高雄 KH</option><option value="TN">台南 TN</option>
       </select>
@@ -382,13 +391,19 @@
 
 <!-- 完工 Modal -->
 <div class="modal" id="doneModal">
-  <h3 style="margin-top:0;">完工申報</h3>
-  <div style="margin-bottom:12px;"><label style="font-size:.85rem;font-weight:600;">實際完工日</label><input type="date" id="mDoneDate" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;"></div>
+  <h3 id="doneModalTitle" style="margin-top:0;">完工申報</h3>
+  <!-- 完工日（暫緩時隱藏） -->
+  <div id="mDoneDateWrap" style="margin-bottom:12px;">
+    <label style="font-size:.85rem;font-weight:600;">實際完工日</label>
+    <input type="date" id="mDoneDate" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;">
+  </div>
+  <!-- 工程師（暫緩時隱藏） -->
   <div id="mEngWrap" style="margin-bottom:14px;">
     <label style="font-size:.85rem;font-weight:600;">維護工程師（執行者）</label>
     <div id="mEngDisplay" style="display:none;padding:10px;border:1px solid var(--border);border-radius:8px;background:#f8fafc;font-weight:600;color:var(--text-soft);"></div>
     <select id="mEngName" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;"></select>
   </div>
+  <!-- 服務方式 -->
   <div style="margin-bottom:16px;">
     <label style="font-size:.85rem;font-weight:600;">服務方式</label>
     <div style="display:flex;gap:20px;margin-top:8px;">
@@ -400,10 +415,20 @@
         <input type="radio" name="serviceType" id="stOnsite" value="onsite" style="width:16px;height:16px;accent-color:var(--primary);">
         <span class="material-symbols-rounded" style="font-size:18px;color:#10b981;">location_on</span>到場
       </label>
+      <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:.9rem;font-weight:500;">
+        <input type="radio" name="serviceType" id="stDeferred" value="deferred" style="width:16px;height:16px;accent-color:#f59e0b;">
+        <span class="material-symbols-rounded" style="font-size:18px;color:#f59e0b;">pause_circle</span>暫緩
+      </label>
     </div>
   </div>
+  <!-- 暫緩說明（選暫緩時才顯示，必填） -->
+  <div id="mDeferredWrap" style="display:none;margin-bottom:16px;">
+    <label style="font-size:.85rem;font-weight:600;color:#d97706;">暫緩說明 <span style="color:var(--danger);">*</span></label>
+    <textarea id="mDeferredReason" rows="3" placeholder="請說明暫緩原因（例：客戶端系統維護中，預計下月再執行）..."
+      style="width:100%;padding:10px;border:1.5px solid #f59e0b;border-radius:8px;font-size:.9rem;resize:vertical;box-sizing:border-box;outline:none;margin-top:6px;"></textarea>
+  </div>
   <div style="display:flex;gap:10px;">
-    <button id="mSave" type="button" class="btn btn-primary" style="flex:1;">提交</button>
+    <button id="mSave" type="button" class="btn btn-primary" style="flex:1;">提交完工</button>
     <button type="button" onclick="closeModal()" class="btn btn-outline" style="flex:1;">取消</button>
   </div>
 </div>
@@ -423,7 +448,7 @@
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;"><h2 style="margin:0;">操作日誌</h2><button class="btn btn-outline" style="padding:5px;border-radius:50%" onclick="closeOpLog()"><span class="material-symbols-rounded">close</span></button></div>
   <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
     <input type="text" id="opLogSearch" placeholder="搜尋帳號、姓名、對象..." style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;outline:none;font-size:.85rem;">
-    <select id="opTypeFilter" class="btn btn-outline" style="font-size:.82rem;"><option value="">全部類型</option><option value="登入">登入</option><option value="新增維護">新增維護</option><option value="編輯維護">編輯維護</option><option value="刪除維護">刪除維護</option><option value="完工申報">完工申報</option><option value="取消完工">取消完工</option><option value="修改密碼">修改密碼</option><option value="新增帳號">新增帳號</option><option value="編輯帳號">編輯帳號</option><option value="刪除帳號">刪除帳號</option><option value="新增產品線">新增產品線</option><option value="新增日誌">新增日誌</option></select>
+    <select id="opTypeFilter" class="btn btn-outline" style="font-size:.82rem;"><option value="">全部類型</option><option value="登入">登入</option><option value="新增維護">新增維護</option><option value="編輯維護">編輯維護</option><option value="刪除維護">刪除維護</option><option value="完工申報">完工申報</option><option value="暫緩申報">暫緩申報</option><option value="取消申報">取消申報</option><option value="取消完工">取消完工</option><option value="修改密碼">修改密碼</option><option value="新增帳號">新增帳號</option><option value="編輯帳號">編輯帳號</option><option value="刪除帳號">刪除帳號</option><option value="新增產品線">新增產品線</option><option value="新增日誌">新增日誌</option></select>
     <select id="opBranchFilter" class="btn btn-outline" style="font-size:.82rem;"><option value="">全部分公司</option><option value="KH">高雄 KH</option><option value="TN">台南 TN</option></select>
   </div>
   <div id="opLogContent" style="overflow-x:auto;"></div>
@@ -506,6 +531,33 @@ function toggleLoginEye(){const i=document.getElementById('loginPwd'),b=document
 function toggleUserPwdEye(){const i=document.getElementById('uPassword');i.type=i.type==='password'?'text':'password';}
 function toggleCpEye(id){const i=document.getElementById(id);i.type=i.type==='password'?'text':'password';}
 
+// ====== Session 保存（重新整理不登出）======
+const SESSION_KEY = 'khsvc_session';
+function saveSession()  { try{ sessionStorage.setItem(SESSION_KEY, JSON.stringify(currentUser)); }catch(e){} }
+function clearSession() { try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){} }
+function restoreSession() {
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return false;
+    const u = JSON.parse(raw);
+    if(!u || !u.username) return false;
+    currentUser = u;
+    return true;
+  }catch(e){ return false; }
+}
+
+// 重新整理：重新載入最新資料，不登出
+async function refreshData() {
+  const btn  = document.getElementById('btnRefresh');
+  const icon = document.getElementById('refreshIcon');
+  if(btn) btn.disabled = true;
+  if(icon) icon.style.animation = 'spin .8s linear infinite';
+  statsCache = null; statsOpen = false;
+  await load();
+  if(btn) btn.disabled = false;
+  if(icon) icon.style.animation = '';
+}
+
 // ====== 登入 ======
 async function doLogin(){
   const username=document.getElementById('loginUser').value.trim();
@@ -518,13 +570,14 @@ async function doLogin(){
     const resp=await fetch(apiURL(`&action=login&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`));
     const r=await resp.json();
     if(r.status!=='ok'){errEl.textContent=r.message||'帳號或密碼錯誤';return;}
-    currentUser=r.user;initAfterLogin();
+    currentUser=r.user; saveSession(); initAfterLogin();
   }catch(e){errEl.textContent='連線失敗，請稍後再試。';}
   finally{btn.disabled=false;btn.textContent='登入';}
 }
 
 function doLogout(){
   currentUser=null;adminUser=null;records=[];systemLogs=[];allProducts=[];
+  clearSession();
   document.getElementById('impersonateBanner').classList.remove('show');
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('mainContent').style.display='none';
@@ -647,8 +700,9 @@ async function sendPayload(payload,successCb,btnEl){
       if(rec){
         let hit=rec.schedule.find(s=>s.ym===payload.ym);
         if(!hit){hit={ym:payload.ym,isDone:false};rec.schedule.push(hit);}
-        if(payload.isCancel){hit.isDone=false;hit.engName='';hit.doneDate='';hit.serviceType='';}
-        else{hit.isDone=true;if(payload.engName)hit.engName=payload.engName;if(payload.doneDate)hit.doneDate=payload.doneDate;if(payload.serviceType)hit.serviceType=payload.serviceType;}
+        if(payload.isCancel){hit.isDone=false;hit.isDeferred=false;hit.engName='';hit.doneDate='';hit.serviceType='';hit.deferredReason='';}
+        else if(payload.serviceType==='deferred'){hit.isDone=false;hit.isDeferred=true;hit.deferredReason=payload.deferredReason||'';hit.engName=payload.engName||'';hit.serviceType='deferred';hit.doneDate='';}
+        else{hit.isDone=true;hit.isDeferred=false;hit.deferredReason='';if(payload.engName)hit.engName=payload.engName;if(payload.doneDate)hit.doneDate=payload.doneDate;if(payload.serviceType)hit.serviceType=payload.serviceType;}
       }
       render();
       if(successCb)successCb();
@@ -692,6 +746,11 @@ function buildProductSelect(){
   sel.innerHTML=allProducts.map(p=>`<option>${p}</option>`).join('');
   if(isSuper())sel.insertAdjacentHTML('beforeend','<option value="__add__">＋ 新增產品線...</option>');
   if(cur&&[...sel.options].some(o=>o.value===cur))sel.value=cur;
+  // 同步更新產品線篩選器
+  const fp=document.getElementById('filterProduct');
+  const curF=fp.value;
+  fp.innerHTML='<option value="">全部產品線</option>'+allProducts.map(p=>`<option value="${p}">${p}</option>`).join('');
+  if(curF&&[...fp.options].some(o=>o.value===curF))fp.value=curF;
 }
 document.getElementById('product').onchange=function(){if(this.value==='__add__'){this.value=this.options[0].value;openProductModal();}};
 
@@ -718,6 +777,7 @@ function render(){
   const scope=document.getElementById('scope').value;
   const fEng=document.getElementById('filterEngineer').value;
   const fSal=document.getElementById('filterSales').value;
+  const fProd=document.getElementById('filterProduct').value;
 
   const filtered=records.filter(r=>{
     // 一般業務（非 canViewAll）只看自己名下的資料
@@ -731,7 +791,8 @@ function render(){
     const hs=(r.schedule||[]).some(s=>s.ym===ym);
     const em=!fEng||(r.engineer||'').toLowerCase()===fEng.toLowerCase();
     const sm=!fSal||(r.salesName||'').toLowerCase()===fSal.toLowerCase();
-    return(scope==='need'?hs:true)&&m&&em&&sm;
+    const pm=!fProd||r.product===fProd;
+    return(scope==='need'?hs:true)&&m&&em&&sm&&pm;
   }).sort((a,b)=>a.customer.localeCompare(b.customer,'zh-Hant'));
 
   // 統計基準：一般業務只統計自己名下的資料；Alex/super/工程師 統計全部
@@ -743,12 +804,15 @@ function render(){
   }
   if(fEng)statBase=statBase.filter(r=>(r.engineer||'').toLowerCase()===fEng.toLowerCase());
   if(fSal)statBase=statBase.filter(r=>(r.salesName||'').toLowerCase()===fSal.toLowerCase());
+  if(fProd)statBase=statBase.filter(r=>r.product===fProd);
   document.getElementById('statTotal').textContent=statBase.length;
   const done=statBase.filter(r=>r.schedule?.some(s=>s.ym===ym&&s.isDone)).length;
-  const todo=statBase.filter(r=>r.schedule?.some(s=>s.ym===ym&&!s.isDone)).length;
+  const deferred=statBase.filter(r=>r.schedule?.some(s=>s.ym===ym&&!s.isDone&&s.isDeferred)).length;
+  const todo=statBase.filter(r=>r.schedule?.some(s=>s.ym===ym&&!s.isDone&&!s.isDeferred)).length;
   document.getElementById('statDone').textContent=done;
   document.getElementById('statTodo').textContent=todo;
-  document.getElementById('statRate').textContent=(done+todo)>0?Math.round(done/(done+todo)*100)+'%':'0%';
+  document.getElementById('statRate').textContent=(done+todo+deferred)>0?Math.round(done/(done+todo+deferred)*100)+'%':'0%';
+  const sdEl=document.getElementById('statDeferred');if(sdEl)sdEl.textContent=deferred;
 
   const showBranch=currentBranchFilter==='ALL';
   const tbody=document.getElementById('rows');
@@ -765,7 +829,13 @@ function render(){
     const recSN=(r.salesName||'').toLowerCase().trim();
     // isOwner：super 全部可編輯；Alex主管級業務(canViewAll) 全部可編輯；一般業務只能編輯自己名下
     const isOwner=isSuper()||canViewAll()||(isSales()&&(recSN===myName||(mySalesKey&&recSN===mySalesKey)));
-    const statusHtml=sch?(sch.isDone?
+    const statusHtml=sch?(sch.isDeferred?
+      (()=>{
+        // 暫緩：琥珀色，備註 icon
+        const hasDeferred=!!(sch.deferredReason&&sch.deferredReason.trim());
+        return `<div class="done-status-box" style="border-color:#f59e0b;background:#fffbeb;"><div class="status-title" style="color:#d97706;"><span class="material-symbols-rounded" style="font-size:17px;color:#f59e0b;">pause_circle</span>暫緩${hasDeferred?`<span class="material-symbols-rounded note-indicator" style="color:#f59e0b;font-size:15px;cursor:pointer;" title="${sch.deferredReason}" onclick="openDeferredNote('${r.id}','${ym}')">info</span>`:''}</div><div class="status-meta" style="color:#92400e;">${sch.engName||'-'}</div></div>`;
+      })():
+      sch.isDone?
       (()=>{
         const stIcon=sch.serviceType==='onsite'
           ?'<span class="material-symbols-rounded" style="font-size:14px;color:#10b981;vertical-align:middle;" title="到場">location_on</span>'
@@ -781,10 +851,10 @@ function render(){
         <td><span style="font-weight:700;">${r.customer}</span>${hasNotes?`<span class="material-symbols-rounded note-indicator" data-tooltip="點擊查看備註" onclick="openNotes('${r.id}')">description</span>`:''}</td>
         <td><div style="font-size:.78rem;color:var(--text-muted);margin-bottom:3px;">${r.product}</div><div>${salesTag}${engTag}</div></td>
         <td style="font-size:.82rem;color:var(--text-muted);white-space:nowrap;">${r.startDate} ~ ${r.endDate}</td>
-        <td><div class="month-group">${(r.schedule||[]).map(s=>`<span class="month-chip ${s.isDone?'is-done':''} ${s.ym===ym?'active':''}">${parseInt(s.ym.slice(5))}月</span>`).join('')}</div></td>
+        <td><div class="month-group">${(r.schedule||[]).map(s=>`<span class="month-chip ${s.isDone?'is-done':s.isDeferred?'is-deferred':''} ${s.ym===ym?'active':''}">${parseInt(s.ym.slice(5))}月</span>`).join('')}</div></td>
         <td>${statusHtml}</td>
         <td><div style="display:flex;gap:5px;justify-content:flex-end;">
-          ${sch&&canToggle?`<button class="btn btn-outline" type="button" style="padding:3px" onclick="toggleDone('${r.id}','${ym}')"><span class="material-symbols-rounded" style="font-size:17px;">${sch.isDone?'history':'done'}</span></button>`:''}
+          ${sch&&canToggle?`<button class="btn btn-outline" type="button" style="padding:3px${sch&&sch.isDeferred?';border-color:#f59e0b;':''}" title="${sch.isDone?'取消完工':sch.isDeferred?'取消暫緩':'完工申報'}" onclick="toggleDone('${r.id}','${ym}')"><span class="material-symbols-rounded" style="font-size:17px;${sch.isDeferred?'color:#f59e0b;':''}">${sch.isDone?'history':sch.isDeferred?'undo':'done'}</span></button>`:''}
           ${isOwner&&!isEngineer()?`<button class="btn btn-outline" type="button" style="padding:3px" onclick="openEdit('${r.id}')"><span class="material-symbols-rounded" style="font-size:17px;">edit</span></button>`:''}
         </div></td>
       </tr>`);
@@ -898,50 +968,118 @@ document.getElementById('btnDelete').onclick=async()=>{
 async function toggleDone(id,ym){
   const r=records.find(x=>x.id===id);
   const sch=r.schedule.find(s=>s.ym===ym);
-  if(sch.isDone){
-    if(confirm('確定取消完工？')){
-      const payload={action:'updateSchedule',role:currentUser.role,user:currentUser.username,displayName:currentUser.displayName,id,ym,isCancel:true,recordBranch:r.branch||currentBranchFilter||'KH'};
+
+  // ── 已完工 → 確認取消完工 ──
+  if(sch&&sch.isDone){
+    if(confirm('確定取消完工？此操作不可逆，狀態將回到待維護。')){
+      const payload={action:'updateSchedule',role:currentUser.role,user:currentUser.username,
+        displayName:currentUser.displayName,id,ym,isCancel:true,
+        recordBranch:r.branch||currentBranchFilter||'KH'};
       await sendPayload(payload,null,null);
     }
-  }else{
-    modalTarget={id,ym,branch:r.branch||currentBranchFilter||'KH'};
-    document.getElementById('mDoneDate').value=new Date().toISOString().slice(0,10);
-    // 預設回到遠端
-    document.getElementById('stRemote').checked=true;
-
-    const eKey=currentUser.engineerKey;
-    const selfName=eKey?eKey.charAt(0).toUpperCase()+eKey.slice(1):'';
-    const isEngMgr=isEngineer()&&canViewAll();   // Eason：工程師主管，顯示下拉
-    const hasDualRole=isSales()&&!!eKey;          // Willa：業務+工程師，顯示下拉
-
-    if(isEngMgr||hasDualRole||isSuper()){
-      // 工程師主管 / 雙重角色業務 / super → 顯示下拉，預設選自己
-      document.getElementById('mEngDisplay').style.display='none';
-      document.getElementById('mEngName').style.display='block';
-      const sel=document.getElementById('mEngName');
-      if(selfName&&[...sel.options].some(o=>o.value===selfName))sel.value=selfName;
-    }else if(isEngineer()&&eKey){
-      // 一般工程師 → 固定顯示自己名稱，不可更改
-      document.getElementById('mEngDisplay').textContent=selfName;
-      document.getElementById('mEngDisplay').style.display='block';
-      document.getElementById('mEngName').style.display='none';
-    }else{
-      // 其他情況 → 顯示下拉
-      document.getElementById('mEngDisplay').style.display='none';
-      document.getElementById('mEngName').style.display='block';
-    }
-    document.getElementById('doneModal').style.display='block';
-    document.getElementById('overlay').style.display='block';
+    return;
   }
+
+  // ── 已暫緩 → 詢問：取消暫緩 or 重新申報 ──
+  if(sch&&sch.isDeferred){
+    const choice=confirm(
+      '此維護目前為「暫緩」狀態。\n\n'+
+      '• 按「確定」→ 取消暫緩，回到待維護\n'+
+      '• 按「取消」→ 關閉此提示（不做任何變更）'
+    );
+    if(choice){
+      const payload={action:'updateSchedule',role:currentUser.role,user:currentUser.username,
+        displayName:currentUser.displayName,id,ym,isCancel:true,
+        recordBranch:r.branch||currentBranchFilter||'KH'};
+      await sendPayload(payload,null,null);
+    }
+    return;
+  }
+
+  // ── 待維護 → 開啟完工申報 Modal ──
+  modalTarget={id,ym,branch:r.branch||currentBranchFilter||'KH'};
+  // 重置表單
+  document.getElementById('doneModalTitle').textContent='完工申報';
+  document.getElementById('mSave').textContent='提交完工';
+  document.getElementById('mDoneDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('stRemote').checked=true;
+  document.getElementById('mDeferredWrap').style.display='none';
+  document.getElementById('mDeferredReason').value='';
+  document.getElementById('mEngWrap').style.display='block';
+  document.getElementById('mDoneDateWrap').style.display='block';
+
+  // 工程師欄位顯示邏輯
+  const eKey=currentUser.engineerKey;
+  const selfName=eKey?eKey.charAt(0).toUpperCase()+eKey.slice(1):'';
+  const isEngMgr=isEngineer()&&canViewAll();
+  const hasDualRole=isSales()&&!!eKey;
+
+  if(isEngMgr||hasDualRole||isSuper()){
+    document.getElementById('mEngDisplay').style.display='none';
+    document.getElementById('mEngName').style.display='block';
+    const sel=document.getElementById('mEngName');
+    if(selfName&&[...sel.options].some(o=>o.value===selfName))sel.value=selfName;
+  }else if(isEngineer()&&eKey){
+    document.getElementById('mEngDisplay').textContent=selfName;
+    document.getElementById('mEngDisplay').style.display='block';
+    document.getElementById('mEngName').style.display='none';
+  }else{
+    document.getElementById('mEngDisplay').style.display='none';
+    document.getElementById('mEngName').style.display='block';
+  }
+  document.getElementById('doneModal').style.display='block';
+  document.getElementById('overlay').style.display='block';
 }
 
 document.getElementById('mSave').onclick=async()=>{
   if(!modalTarget)return;
-  const engName=document.getElementById('mEngDisplay').style.display!=='none'?document.getElementById('mEngDisplay').textContent:document.getElementById('mEngName').value;
   const serviceType=document.querySelector('input[name="serviceType"]:checked')?.value||'remote';
-  const payload={action:'updateSchedule',role:currentUser.role,user:currentUser.username,displayName:currentUser.displayName,id:modalTarget.id,ym:modalTarget.ym,engName,doneDate:document.getElementById('mDoneDate').value,serviceType,recordBranch:modalTarget.branch||currentBranchFilter||'KH'};
+  const deferredReason=document.getElementById('mDeferredReason').value.trim();
+
+  // 暫緩必填說明
+  if(serviceType==='deferred'){
+    if(!deferredReason){
+      alert('請填寫暫緩說明，讓主管了解原因。');
+      document.getElementById('mDeferredReason').focus();
+      return;
+    }
+    // 暫緩：不帶入完工日與工程師（後端不觸發寄信）
+    const payload={
+      action:'updateSchedule',role:currentUser.role,user:currentUser.username,
+      displayName:currentUser.displayName,id:modalTarget.id,ym:modalTarget.ym,
+      serviceType:'deferred',deferredReason,
+      recordBranch:modalTarget.branch||currentBranchFilter||'KH'
+    };
+    await sendPayload(payload,()=>closeModal(),document.getElementById('mSave'));
+    return;
+  }
+
+  // 完工：帶入工程師與完工日
+  const engName=document.getElementById('mEngDisplay').style.display!=='none'
+    ?document.getElementById('mEngDisplay').textContent
+    :document.getElementById('mEngName').value;
+  const payload={
+    action:'updateSchedule',role:currentUser.role,user:currentUser.username,
+    displayName:currentUser.displayName,id:modalTarget.id,ym:modalTarget.ym,
+    engName,doneDate:document.getElementById('mDoneDate').value,
+    serviceType,deferredReason:'',
+    recordBranch:modalTarget.branch||currentBranchFilter||'KH'
+  };
   await sendPayload(payload,()=>closeModal(),document.getElementById('mSave'));
 };
+
+// 服務方式切換：動態顯示/隱藏欄位、更新標題與按鈕文字
+document.querySelectorAll('input[name="serviceType"]').forEach(el=>{
+  el.addEventListener('change',()=>{
+    const isDeferred=document.getElementById('stDeferred').checked;
+    document.getElementById('mDeferredWrap').style.display=isDeferred?'block':'none';
+    document.getElementById('mEngWrap').style.display=isDeferred?'none':'block';
+    document.getElementById('mDoneDateWrap').style.display=isDeferred?'none':'block';
+    document.getElementById('doneModalTitle').textContent=isDeferred?'紀錄暫緩':'完工申報';
+    document.getElementById('mSave').textContent=isDeferred?'提交暫緩':'提交完工';
+    if(isDeferred) document.getElementById('mDeferredReason').focus();
+  });
+});
 
 function closeModal(){document.getElementById('doneModal').style.display='none';document.getElementById('overlay').style.display='none';modalTarget=null;}
 function closeAllDrawers(){document.querySelectorAll('.modal').forEach(m=>m.style.display='none');document.getElementById('overlay').style.display='none';modalTarget=null;}
@@ -950,6 +1088,16 @@ function openNotes(id){
   if(!r)return;
   document.getElementById('notesModalCustomer').textContent=r.customer+(r.product?' ｜ '+r.product:'');
   document.getElementById('notesModalContent').innerHTML=r.notes||'<em style="color:#94a3b8;">尚無備註</em>';
+  document.getElementById('notesModal').style.display='block';
+  document.getElementById('overlay').style.display='block';
+}
+function openDeferredNote(id,ym){
+  const r=records.find(x=>x.id===id);
+  if(!r)return;
+  const sch=(r.schedule||[]).find(s=>s.ym===ym);
+  if(!sch)return;
+  document.getElementById('notesModalCustomer').textContent=r.customer+(r.product?' ｜ '+r.product:'')+'　'+ym.slice(0,4)+'年'+parseInt(ym.slice(5))+'月　暫緩說明';
+  document.getElementById('notesModalContent').innerHTML=`<p style="color:#d97706;white-space:pre-wrap;">${sch.deferredReason||'（未填寫）'}</p>`;
   document.getElementById('notesModal').style.display='block';
   document.getElementById('overlay').style.display='block';
 }
@@ -1125,22 +1273,49 @@ let statsOpen = false;
 let statsCache = null;
 let statsLoading = false;
 
+// 「僅看自己合約到期預警、不看工程師/趨勢」的角色判斷
+// 條件：role=sales 且 非 super 且 非 branch=ALL 主管 且 非工程師
+function isSalesOnly_() {
+  return isSales() && !isSuper() && !canViewAll() && !isEngineer();
+}
+
+// 依角色立即套用統計區塊的顯示控制（不等 API）
+function applyStatsVisibility() {
+  const salesOnly = isSalesOnly_();
+  const engCard   = document.getElementById('engBarCard');
+  const trendCard = document.getElementById('trendCard');
+  const grid      = document.querySelector('.stats-charts-grid');
+  if (salesOnly) {
+    if (engCard)   engCard.style.display   = 'none';
+    if (trendCard) trendCard.style.display = 'none';
+    if (grid)      grid.style.gridTemplateColumns = '1fr';
+  } else {
+    if (engCard)   engCard.style.display   = '';
+    if (trendCard) trendCard.style.display = '';
+    if (grid)      grid.style.gridTemplateColumns = '';
+  }
+}
+
 function toggleStats() {
   statsOpen = !statsOpen;
   const body  = document.getElementById('statsBody');
   const arrow = document.getElementById('statsArrow');
   body.style.display  = statsOpen ? 'block' : 'none';
   arrow.classList.toggle('open', statsOpen);
-  if (statsOpen && !statsCache && !statsLoading) loadStats();
+  if (statsOpen) {
+    applyStatsVisibility();                               // ← 展開時立即套用，不等 API
+    if (!statsCache && !statsLoading) loadStats();
+  }
 }
 
 async function loadStats() {
   if (statsLoading) return;
   statsLoading = true;
+  applyStatsVisibility();                                 // ← 載入開始時再確認一次
   try {
     // 業務角色傳入自己的 salesFilter，super/工程師 不傳（看全部）
-    const salesFilter = (isSales() && !isSuper() && !canViewAll())
-      ? encodeURIComponent((currentUser.displayName || currentUser.username).trim())
+    const salesFilter = isSalesOnly_()
+      ? encodeURIComponent((currentUser.salesKey || currentUser.displayName || currentUser.username).trim())
       : '';
     const statsUrl = apiURL(`&action=getStats&branch=${currentBranchFilter || 'KH'}`) +
       (salesFilter ? `&salesFilter=${salesFilter}` : '');
@@ -1168,24 +1343,14 @@ async function onBranchFilterChange() {
 }
 
 function renderStats(data) {
-  // 業務角色（非 admin / 非主管級）：隱藏工程師工作量及月度完工趨勢
-  const isSalesOnly = isSales() && !isSuper() && !canViewAll();
-  const engCard   = document.getElementById('engBarCard');
-  const trendCard = document.getElementById('trendCard');
-  const grid      = document.querySelector('.stats-charts-grid');
-  if (isSalesOnly) {
-    if (engCard)   engCard.style.display   = 'none';
-    if (trendCard) trendCard.style.display = 'none';
-    if (grid)      grid.style.gridTemplateColumns = '1fr';
-  } else {
-    if (engCard)   engCard.style.display   = '';
-    if (trendCard) trendCard.style.display = '';
-    if (grid)      grid.style.gridTemplateColumns = '';
-  }
+  const salesOnly = isSalesOnly_();
+
+  // 顯示控制（雙重保險，renderStats 執行時再套用一次）
+  applyStatsVisibility();
 
   // 業務端二次過濾：僅顯示屬於自己的到期預警
   let expiryItems = data.expiring || [];
-  if (isSalesOnly) {
+  if (salesOnly) {
     const myN  = (currentUser.displayName || currentUser.username).toLowerCase().trim();
     const mySK = (currentUser.salesKey || '').toLowerCase().trim();
     expiryItems = expiryItems.filter(it => {
@@ -1194,14 +1359,16 @@ function renderStats(data) {
     });
   }
 
-  renderExpiryList(expiryItems, isSalesOnly);
-  renderEngBar(data.engineerLoad || [], data.totalRecords || 0, data.dataFrom || '', data.dataTo || '');
-  renderTrendChart(data.monthlyTrend || []);
+  renderExpiryList(expiryItems);
+  if (!salesOnly) {
+    renderEngBar(data.engineerLoad || [], data.totalRecords || 0, data.dataFrom || '', data.dataTo || '');
+    renderTrendChart(data.monthlyTrend || []);
+  }
 }
 
 
 // ① 合約到期預警
-function renderExpiryList(items, salesOnly) {
+function renderExpiryList(items) {
   const el = document.getElementById('expiryList');
   if (!items.length) {
     el.innerHTML = '<div class="trend-empty" style="padding:30px 0;">✅ 無合約到期預警</div>';
@@ -1406,6 +1573,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('monthPick').value=new Date().toISOString().slice(0,7);
   document.getElementById('loginPwd').addEventListener('keyup',e=>{if(e.key==='Enter')doLogin();});
   document.getElementById('loginUser').addEventListener('keyup',e=>{if(e.key==='Enter')document.getElementById('loginPwd').focus();});
+  // 頁面重新整理時自動還原登入狀態（sessionStorage 關閉分頁後自動清除）
+  if(restoreSession()) initAfterLogin();
 });
 document.getElementById('q').oninput=render;
 document.getElementById('monthPick').onchange=render;
