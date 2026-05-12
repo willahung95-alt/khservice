@@ -214,6 +214,15 @@
     .tl-detail-val{color:var(--text-main);font-weight:600;}
     .tl-deferred-reason{grid-column:1/-1;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:8px 10px;color:#92400e;font-size:.82rem;margin-top:4px;white-space:pre-wrap;line-height:1.6;}
     .history-empty{text-align:center;padding:40px 0;color:var(--text-muted);}
+    .tl-events{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+    .tl-event{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);}
+    .tl-event.deferred-event{background:#fffbeb;border-color:#fcd34d;}
+    .tl-event.done-event{background:#f0fdf4;border-color:#a7f3d0;}
+    .tl-ev-icon{font-size:20px;margin-top:1px;flex-shrink:0;}
+    .tl-ev-body{flex:1;min-width:0;}
+    .tl-ev-title{font-weight:700;font-size:.88rem;margin-bottom:6px;}
+    .tl-ev-date{font-weight:500;color:var(--text-muted);font-size:.82rem;}
+    .tl-ev-num{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#e2e8f0;color:var(--text-muted);font-size:.72rem;font-weight:700;flex-shrink:0;margin-top:2px;}
     .tl-service-icon{font-size:14px;color:var(--text-muted);}
 
   </style>
@@ -757,10 +766,24 @@ async function sendPayload(payload,successCb,btnEl){
       const rec=records.find(x=>x.id===payload.id);
       if(rec){
         let hit=rec.schedule.find(s=>s.ym===payload.ym);
-        if(!hit){hit={ym:payload.ym,isDone:false};rec.schedule.push(hit);}
-        if(payload.isCancel){hit.isDone=false;hit.isDeferred=false;hit.engName='';hit.doneDate='';hit.serviceType='';hit.deferredReason='';}
-        else if(payload.serviceType==='deferred'){hit.isDone=false;hit.isDeferred=true;hit.deferredReason=payload.deferredReason||'';hit.engName=payload.engName||'';hit.serviceType='deferred';hit.doneDate='';}
-        else{hit.isDone=true;hit.isDeferred=false;hit.deferredReason='';if(payload.engName)hit.engName=payload.engName;if(payload.doneDate)hit.doneDate=payload.doneDate;if(payload.serviceType)hit.serviceType=payload.serviceType;}
+        if(!hit){hit={ym:payload.ym,isDone:false,isDeferred:false,events:[]};rec.schedule.push(hit);}
+        if(!Array.isArray(hit.events))hit.events=[];
+        const nowTs=new Date().toISOString().slice(0,16).replace('T',' ');
+        if(payload.isCancel){
+          hit.isDone=false;hit.isDeferred=false;hit.engName='';hit.doneDate='';hit.serviceType='';hit.deferredReason='';
+          hit.events.push({type:'cancel',ts:nowTs,by:currentUser.displayName||currentUser.username});
+        } else if(payload.serviceType==='deferred'){
+          hit.isDone=false;hit.isDeferred=true;hit.deferredReason=payload.deferredReason||'';
+          hit.engName=payload.engName||'';hit.serviceType='deferred';hit.doneDate='';
+          const deferDate=payload.deferDate||nowTs.slice(0,10);
+          hit.events.push({type:'deferred',date:deferDate,engName:hit.engName,reason:hit.deferredReason,ts:nowTs});
+        } else {
+          hit.isDone=true;hit.isDeferred=false;hit.deferredReason='';
+          if(payload.engName)hit.engName=payload.engName;
+          if(payload.doneDate)hit.doneDate=payload.doneDate;
+          if(payload.serviceType)hit.serviceType=payload.serviceType;
+          hit.events.push({type:'done',date:hit.doneDate,engName:hit.engName,serviceType:hit.serviceType,ts:nowTs});
+        }
       }
       render();
       if(successCb)successCb();
@@ -914,7 +937,7 @@ function render(){
         <td><div style="display:flex;gap:5px;justify-content:flex-end;">
           ${sch&&canToggle?`<button class="btn btn-outline" type="button" style="padding:3px${sch&&sch.isDeferred?';border-color:#f59e0b;':''}" title="${sch.isDone?'取消完工':sch.isDeferred?'取消暫緩':'完工申報'}" onclick="toggleDone('${r.id}','${ym}')"><span class="material-symbols-rounded" style="font-size:17px;${sch.isDeferred?'color:#f59e0b;':''}">${sch.isDone?'history':sch.isDeferred?'undo':'done'}</span></button>`:''}
           ${isOwner&&!isEngineer()?`<button class="btn btn-outline" type="button" style="padding:3px" onclick="openEdit('${r.id}')"><span class="material-symbols-rounded" style="font-size:17px;">edit</span></button>`:''}
-          <button class="btn btn-outline" type="button" style="padding:3px" title="維護歷程" onclick="openHistory('${r.id}')"><span class="material-symbols-rounded" style="font-size:17px;">history</span></button>
+          <button class="btn btn-outline" type="button" style="padding:3px" title="維護歷程" onclick="openHistory('${r.id}')"><span class="material-symbols-rounded" style="font-size:17px;">event_note</span></button>
         </div></td>
       </tr>`);
   });
@@ -1112,6 +1135,7 @@ document.getElementById('mSave').onclick=async()=>{
       action:'updateSchedule',role:currentUser.role,user:currentUser.username,
       displayName:currentUser.displayName,id:modalTarget.id,ym:modalTarget.ym,
       serviceType:'deferred',deferredReason,
+      deferDate:new Date().toISOString().slice(0,10),
       recordBranch:modalTarget.branch||currentBranchFilter||'KH'
     };
     await sendPayload(payload,()=>closeModal(),document.getElementById('mSave'));
@@ -1704,47 +1728,73 @@ function renderHistoryTimeline(r) {
   }
 
   tl.innerHTML = sch.map(s => {
-    let status, dotClass, badgeClass, badgeText;
+    // 頂層狀態決定時間軸顏色
+    let dotColor, badgeClass, badgeText;
     if (s.isDone) {
-      status = 'done'; dotClass = 'done'; badgeClass = 'done'; badgeText = '✅ 已完工';
+      dotColor = 'var(--success)'; badgeClass = 'done'; badgeText = '✅ 已完工';
     } else if (s.isDeferred) {
-      status = 'deferred'; dotClass = 'deferred'; badgeClass = 'deferred'; badgeText = '⏸ 暫緩';
+      dotColor = '#f59e0b'; badgeClass = 'deferred'; badgeText = '⏸ 暫緩中';
     } else if (s.ym < todayYM) {
-      status = 'overdue'; dotClass = 'overdue'; badgeClass = 'overdue'; badgeText = '⚠️ 逾期未完工';
+      dotColor = 'var(--danger)'; badgeClass = 'overdue'; badgeText = '⚠️ 逾期未完工';
     } else {
-      status = 'pending'; dotClass = 'pending'; badgeClass = 'pending'; badgeText = '待執行';
+      dotColor = '#e2e8f0'; badgeClass = 'pending'; badgeText = '待執行';
     }
 
     const ymDisplay = s.ym.slice(0, 4) + ' 年 ' + parseInt(s.ym.slice(5)) + ' 月';
 
-    let detailRows = '';
-    if (s.isDone) {
-      const stLabel = SERVICE_TYPE_LABEL[s.serviceType] || s.serviceType || '-';
-      detailRows += `
-        <div class="tl-detail-row"><span class="tl-detail-label">完工日期</span><span class="tl-detail-val">${s.doneDate || '-'}</span></div>
-        <div class="tl-detail-row"><span class="tl-detail-label">執行工程師</span><span class="tl-detail-val">${s.engName || r.engineer || '-'}</span></div>
-        <div class="tl-detail-row"><span class="tl-detail-label">服務方式</span><span class="tl-detail-val">${stLabel}</span></div>`;
-    } else if (s.isDeferred) {
-      detailRows += `
-        <div class="tl-detail-row"><span class="tl-detail-label">暫緩記錄人</span><span class="tl-detail-val">${s.engName || r.engineer || '-'}</span></div>`;
-      if (s.deferredReason && s.deferredReason.trim()) {
-        detailRows += `<div style="grid-column:1/-1;"><div class="tl-deferred-reason">📝 暫緩說明：${s.deferredReason}</div></div>`;
-      }
-    }
+    // 建立 events 歷程（向後相容：舊資料沒有 events，從頂層狀態補一筆）
+    const events = Array.isArray(s.events) && s.events.length > 0
+      ? s.events
+      : (s.isDone ? [{ type:'done', date: s.doneDate, engName: s.engName, serviceType: s.serviceType }]
+        : s.isDeferred ? [{ type:'deferred', date:'', engName: s.engName, reason: s.deferredReason }]
+        : []);
 
-    const detailHtml = detailRows ? `<div class="tl-detail">${detailRows}</div>` : '';
+    // 過濾掉 cancel 事件（不顯示，只在 opLog 留紀錄）
+    const visibleEvents = events.filter(ev => ev.type !== 'cancel');
+
+    let eventsHtml = '';
+    if (visibleEvents.length > 0) {
+      eventsHtml = `<div class="tl-events">` + visibleEvents.map((ev, idx) => {
+        const evNum = visibleEvents.length > 1 ? `<span class="tl-ev-num">${idx + 1}</span>` : '';
+        if (ev.type === 'deferred') {
+          return `<div class="tl-event deferred-event">
+            ${evNum}<span class="material-symbols-rounded tl-ev-icon" style="color:#f59e0b;">pause_circle</span>
+            <div class="tl-ev-body">
+              <div class="tl-ev-title" style="color:#d97706;">暫緩記錄${ev.date ? `　<span class="tl-ev-date">${ev.date}</span>` : ''}</div>
+              <div class="tl-detail"><div class="tl-detail-row"><span class="tl-detail-label">記錄工程師</span><span class="tl-detail-val">${ev.engName || r.engineer || '-'}</span></div></div>
+              ${ev.reason && ev.reason.trim() ? `<div class="tl-deferred-reason">📝 暫緩說明：${ev.reason}</div>` : ''}
+            </div>
+          </div>`;
+        }
+        if (ev.type === 'done') {
+          const stLabel = SERVICE_TYPE_LABEL[ev.serviceType] || ev.serviceType || '-';
+          return `<div class="tl-event done-event">
+            ${evNum}<span class="material-symbols-rounded tl-ev-icon" style="color:var(--success);">check_circle</span>
+            <div class="tl-ev-body">
+              <div class="tl-ev-title" style="color:var(--success-dark);">完工記錄${ev.date ? `　<span class="tl-ev-date">${ev.date}</span>` : ''}</div>
+              <div class="tl-detail">
+                <div class="tl-detail-row"><span class="tl-detail-label">執行工程師</span><span class="tl-detail-val">${ev.engName || r.engineer || '-'}</span></div>
+                <div class="tl-detail-row"><span class="tl-detail-label">服務方式</span><span class="tl-detail-val">${stLabel}</span></div>
+              </div>
+            </div>
+          </div>`;
+        }
+        return '';
+      }).join('') + `</div>`;
+    }
 
     return `<div class="tl-item">
       <div class="tl-left">
-        <div class="tl-dot ${dotClass}" style="background:${status==='done'?'var(--success)':status==='deferred'?'var(--warning)':status==='overdue'?'var(--danger)':'#e2e8f0'};border-color:#fff;"></div>
+        <div class="tl-dot" style="background:${dotColor};border-color:#fff;"></div>
         <div class="tl-line"></div>
       </div>
       <div class="tl-right">
         <div class="tl-header">
           <span class="tl-ym">${ymDisplay}</span>
           <span class="tl-badge ${badgeClass}">${badgeText}</span>
+          ${visibleEvents.length > 1 ? `<span style="font-size:.75rem;color:var(--text-muted);margin-left:auto;">${visibleEvents.length} 筆記錄</span>` : ''}
         </div>
-        ${detailHtml}
+        ${eventsHtml}
       </div>
     </div>`;
   }).join('');
@@ -1756,33 +1806,45 @@ function downloadHistoryCsv() {
   const sch = (r.schedule || []).slice().sort((a, b) => a.ym.localeCompare(b.ym));
   const todayYM = new Date().toISOString().slice(0, 7);
 
-  const headers = ['客戶名稱','產品','業務','負責工程師','合約起日','合約訖日','維護月份','狀態','完工日期','執行工程師','服務方式','暫緩說明'];
-  const rows = sch.map(s => {
-    let status;
-    if      (s.isDone)      status = '已完工';
-    else if (s.isDeferred)  status = '暫緩';
-    else if (s.ym < todayYM) status = '逾期未完工';
-    else                    status = '待執行';
-    const stLabel = s.serviceType === 'remote' ? '遠端' : s.serviceType === 'onsite' ? '到場' : s.serviceType === 'deferred' ? '暫緩' : '-';
-    return [
-      r.customer, r.product, r.salesName, r.engineer,
-      r.startDate, r.endDate,
-      s.ym,
-      status,
-      s.doneDate  || '-',
-      s.engName   || (s.isDone ? r.engineer : '-'),
-      s.isDone    ? stLabel : '-',
-      s.deferredReason || '-'
-    ].map(v => '"' + String(v || '').replace(/"/g, '""') + '"');
+  const headers = ['客戶名稱','產品','業務','負責工程師','合約起日','合約訖日','維護月份','目前狀態','事件類型','事件日期','執行工程師','服務方式','暫緩說明'];
+  const rows = [];
+  sch.forEach(s => {
+    let currentStatus;
+    if      (s.isDone)       currentStatus = '已完工';
+    else if (s.isDeferred)   currentStatus = '暫緩中';
+    else if (s.ym < todayYM) currentStatus = '逾期未完工';
+    else                     currentStatus = '待執行';
+
+    const events = Array.isArray(s.events) && s.events.length > 0
+      ? s.events
+      : (s.isDone
+          ? [{ type:'done', date: s.doneDate, engName: s.engName, serviceType: s.serviceType }]
+          : s.isDeferred
+          ? [{ type:'deferred', date:'', engName: s.engName, reason: s.deferredReason }]
+          : [{ type:'pending', date:'', engName:'', serviceType:'', reason:'' }]);
+
+    events.forEach(ev => {
+      const evTypeLabel = ev.type === 'done' ? '完工' : ev.type === 'deferred' ? '暫緩' : ev.type === 'cancel' ? '取消申報' : '待執行';
+      const stLabel = ev.serviceType === 'remote' ? '遠端' : ev.serviceType === 'onsite' ? '到場' : '-';
+      rows.push([
+        r.customer, r.product, r.salesName, r.engineer,
+        r.startDate, r.endDate, s.ym,
+        currentStatus, evTypeLabel,
+        ev.date || '-',
+        ev.engName || (s.isDone ? r.engineer : '-'),
+        ev.type === 'done' ? stLabel : '-',
+        ev.reason || ev.deferredReason || '-'
+      ].map(v => '"' + String(v || '').replace(/"/g, '""') + '"'));
+    });
   });
 
-  const bom   = '﻿';
-  const csv   = bom + [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob  = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url   = URL.createObjectURL(blob);
-  const a     = document.createElement('a');
-  a.href      = url;
-  a.download  = `維護歷程_${r.customer}_${r.product}_${new Date().toISOString().slice(0,10)}.csv`;
+  const bom  = '\uFEFF';
+  const csv  = bom + [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `維護歷程_${r.customer}_${r.product}_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }
