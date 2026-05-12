@@ -121,6 +121,12 @@
     .op-add{background:#d1fae5;color:#065f46;}.op-edit{background:#dbeafe;color:#1e40af;}
     .op-delete{background:#fee2e2;color:#991b1b;}.op-done{background:#fef3c7;color:#92400e;}.op-login{background:#f3e8ff;color:#6b21a8;}
 
+    /* 變身橫幅 */
+    #impersonateBanner{display:none;position:sticky;top:0;z-index:300;background:linear-gradient(90deg,#7c3aed,#4f46e5);color:#fff;padding:8px 20px;font-size:.88rem;font-weight:600;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(79,70,229,.35);}
+    #impersonateBanner.show{display:flex;}
+    #impersonateBanner .imp-info{flex:1;}
+    #impersonateBanner .imp-back{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;padding:4px 14px;font-size:.82rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.2s;}
+    #impersonateBanner .imp-back:hover{background:rgba(255,255,255,.3);}
     /* 帳號管理 */
     .user-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
     .user-row:last-child{border-bottom:none;}
@@ -131,6 +137,47 @@
     .loading-spinner{width:44px;height:44px;border:4px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;}
     @keyframes spin{to{transform:rotate(360deg)}}
     .loading-text{font-size:1rem;font-weight:600;color:var(--text-muted);}
+
+    /* ====== 統計分析區塊 ====== */
+    #statsSection{margin-bottom:1.5rem;}
+    .stats-toggle-bar{display:flex;align-items:center;justify-content:space-between;background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 20px;cursor:pointer;user-select:none;box-shadow:var(--shadow);transition:.2s;}
+    .stats-toggle-bar:hover{border-color:var(--primary);background:var(--primary-light);}
+    .stats-toggle-title{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1rem;color:var(--text-main);}
+    .stats-toggle-arrow{color:var(--text-muted);transition:transform .3s;font-size:22px;}
+    .stats-toggle-arrow.open{transform:rotate(180deg);}
+    #statsBody{display:none;margin-top:1rem;display:none;}
+    .stats-charts-grid{display:grid;grid-template-columns:1.2fr 0.8fr 1.8fr;gap:1.25rem;margin-top:1rem;}
+    @media(max-width:1200px){.stats-charts-grid{grid-template-columns:1fr 1fr;}}
+    @media(max-width:700px){.stats-charts-grid{grid-template-columns:1fr;}}
+    .chart-card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow);}
+    .chart-card-title{font-size:.92rem;font-weight:700;color:var(--text-main);margin-bottom:1rem;display:flex;align-items:center;gap:7px;}
+    .chart-card-title .material-symbols-rounded{font-size:20px;}
+    /* 合約到期預警 */
+    .expiry-list{display:flex;flex-direction:column;gap:7px;max-height:280px;overflow-y:auto;}
+    .expiry-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:#fff;}
+    .expiry-badge{flex-shrink:0;width:52px;text-align:center;border-radius:8px;padding:4px 0;font-size:12px;font-weight:800;line-height:1.3;}
+    .expiry-red{background:#fee2e2;color:#991b1b;}
+    .expiry-orange{background:#fff7ed;color:#c2410c;}
+    .expiry-yellow{background:#fefce8;color:#a16207;}
+    .expiry-info{flex:1;min-width:0;}
+    .expiry-customer{font-weight:700;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .expiry-meta{font-size:.75rem;color:var(--text-muted);margin-top:2px;}
+    /* 工程師工作量 — 橫條圖 */
+    .eng-bar-list{display:flex;flex-direction:column;gap:10px;}
+    .eng-bar-row{display:flex;align-items:center;gap:10px;}
+    .eng-bar-name{width:72px;font-size:.82rem;font-weight:600;color:var(--text-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;}
+    .eng-bar-track{flex:1;height:22px;background:#f1f5f9;border-radius:100px;overflow:hidden;}
+    .eng-bar-fill{height:100%;border-radius:100px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:11px;font-weight:700;color:#fff;transition:width .6s ease;min-width:32px;}
+    .eng-bar-count{width:44px;text-align:right;font-size:.82rem;font-weight:700;color:var(--text-muted);flex-shrink:0;}
+    /* 月度完工趨勢 — SVG 折線圖 */
+    #trendChart{width:100%;overflow:visible;}
+    .trend-empty{text-align:center;color:#94a3b8;padding:40px 0;font-size:.9rem;}
+    /* 統計摘要徽章 */
+    .stats-summary-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;}
+    .summary-chip{background:var(--primary-light);color:var(--primary);padding:4px 12px;border-radius:100px;font-size:.8rem;font-weight:700;border:1px solid #c7d2fe;}
+    .summary-chip.warn{background:#fff7ed;color:#c2410c;border-color:#fed7aa;}
+    .summary-chip.danger{background:#fee2e2;color:#991b1b;border-color:#fecaca;}
+
   </style>
 </head>
 <body>
@@ -176,12 +223,56 @@
         <span id="userBadgeName">-</span>
         <span class="role-chip" id="userBadgeRole">-</span>
         <button class="btn btn-outline" style="padding:3px 8px;font-size:.78rem;" onclick="openChangePwd()"><span class="material-symbols-rounded" style="font-size:14px;">lock_reset</span>改密碼</button>
-        <button class="btn btn-outline" style="padding:3px 8px;font-size:.78rem;" onclick="doLogout()">登出</button>
+        <button class="btn btn-outline" style="padding:3px 8px;font-size:.78rem;" onclick="adminUser?exitImpersonate():doLogout()">登出</button>
       </div>
     </div>
   </header>
 
+  <!-- 變身橫幅 -->
+  <div id="impersonateBanner">
+    <span class="material-symbols-rounded" style="font-size:20px;">manage_accounts</span>
+    <span class="imp-info">目前以 <b id="impersonateLabel"></b> 身份瀏覽（測試模式）</span>
+    <button class="imp-back" onclick="exitImpersonate()"><span class="material-symbols-rounded" style="font-size:16px;">undo</span>返回管理者</button>
+  </div>
+
   <main>
+
+    <!-- ====== 統計分析區塊 ====== -->
+    <div id="statsSection">
+      <div class="stats-toggle-bar" onclick="toggleStats()">
+        <div class="stats-toggle-title">
+          <span class="material-symbols-rounded" style="color:var(--primary);font-size:22px;">analytics</span>
+          統計分析
+        </div>
+        <span class="material-symbols-rounded stats-toggle-arrow" id="statsArrow">expand_more</span>
+      </div>
+      <div id="statsBody" style="display:none;">
+        <div class="stats-charts-grid">
+          <!-- 合約到期預警 -->
+          <div class="chart-card">
+            <div class="chart-card-title"><span class="material-symbols-rounded" style="color:var(--danger);">warning</span>合約到期預警<span style="font-size:.78rem;font-weight:500;color:var(--text-muted);">（90天內）</span></div>
+            <div id="expiryList" class="expiry-list"><div class="trend-empty">載入中...</div></div>
+          </div>
+          <!-- 工程師工作量 -->
+          <div class="chart-card" id="engBarCard">
+            <div class="chart-card-title" style="justify-content:space-between;flex-wrap:wrap;gap:4px;">
+              <span style="display:flex;align-items:center;gap:7px;"><span class="material-symbols-rounded" style="color:var(--primary);">person_check</span>工程師工作量分布</span>
+              <span id="engBarRange" style="font-size:.75rem;font-weight:500;color:var(--text-muted);background:#f1f5f9;padding:2px 8px;border-radius:8px;"></span>
+            </div>
+            <div id="engBarChart" class="eng-bar-list"><div class="trend-empty">載入中...</div></div>
+          </div>
+          <!-- 月度完工趨勢 -->
+          <div class="chart-card" id="trendCard">
+            <div class="chart-card-title" style="justify-content:space-between;flex-wrap:wrap;gap:4px;">
+              <span style="display:flex;align-items:center;gap:7px;"><span class="material-symbols-rounded" style="color:var(--success);">trending_up</span>月度完工趨勢（近12個月）</span>
+              <span id="trendOverall" style="font-size:.75rem;font-weight:600;color:var(--text-muted);"></span>
+            </div>
+            <div id="trendChartWrap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="stats-row">
       <div class="stat-card"><div class="stat-icon" style="background:#eef2ff;color:var(--primary);"><span class="material-symbols-rounded">groups</span></div><div class="stat-info"><div class="stat-label">總客戶數</div><div class="stat-value" id="statTotal">0</div></div></div>
       <div class="stat-card"><div class="stat-icon" style="background:var(--success-light);color:var(--success);"><span class="material-symbols-rounded">check_circle</span></div><div class="stat-info"><div class="stat-label">本月已完工</div><div class="stat-value" id="statDone">0</div></div></div>
@@ -385,6 +476,7 @@ function apiURL(extra){return `${API_URL}?token=${encodeURIComponent(API_TOKEN)}
 
 // ====== 狀態 ======
 let currentUser=null;
+let adminUser=null;  // 變身模式下保存原始管理者身份
 let records=[],systemLogs=[],allProducts=[],allUsers=[],allOpLogs=[];
 let editingId=null,editingLogVersion=null,editingUsername=null;
 let modalTarget=null,editingYMList=[],endDateManual=false;
@@ -432,7 +524,8 @@ async function doLogin(){
 }
 
 function doLogout(){
-  currentUser=null;records=[];systemLogs=[];allProducts=[];
+  currentUser=null;adminUser=null;records=[];systemLogs=[];allProducts=[];
+  document.getElementById('impersonateBanner').classList.remove('show');
   document.getElementById('loginScreen').style.display='flex';
   document.getElementById('mainContent').style.display='none';
   document.getElementById('loginUser').value='';
@@ -532,12 +625,7 @@ function rebuildFilterOptions_(){
   if(curS&&[...fsSel.options].some(o=>o.value===curS))fsSel.value=curS;
 }
 
-// ====== 分公司切換 ======
-async function onBranchFilterChange(){
-  currentBranchFilter=document.getElementById('branchFilter').value;
-  document.getElementById('thBranch').style.display=currentBranchFilter==='ALL'?'':'none';
-  await load();
-}
+// onBranchFilterChange defined in stats section above
 
 // ====== ★ 修正3：sendPayload — 完工申報只更新記憶體，不重新 fetch ======
 async function sendPayload(payload,successCb,btnEl){
@@ -932,6 +1020,7 @@ function renderUserList(){
         <div style="font-size:.78rem;color:var(--text-muted);">@${u.username}${u.email?' · '+u.email:''} · 建立：${u.createdAt}</div>
       </div>
       <button class="btn btn-outline" style="padding:4px 8px;font-size:.8rem;" onclick="openEditUser('${u.username}')">編輯</button>
+      ${u.username!==currentUser.username&&u.role!=='super'?`<button class="btn btn-outline" style="padding:4px 8px;font-size:.8rem;color:#7c3aed;border-color:#7c3aed;" onclick="impersonateUser('${u.username}')"><span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;">switch_account</span> 變身</button>`:''}
       ${u.username!==currentUser.username?`<button class="btn btn-danger-text" onclick="deleteUser('${u.username}')">刪除</button>`:''}
     </div>`).join('');
 }
@@ -971,6 +1060,53 @@ async function saveUser(){
 }
 async function deleteUser(username){if(!confirm(`確定刪除帳號「${username}」？此動作無法復原。`))return;const payload={action:'deleteUser',role:currentUser.role,user:currentUser.username,displayName:currentUser.displayName,data:{username}};await sendPayload(payload,async()=>{const resp=await fetch(apiURL('&action=getUsers'));const r=await resp.json();allUsers=r.users||[];renderUserList();});}
 
+// ====== 變身 / 切換帳號 ======
+async function impersonateUser(username) {
+  const target = allUsers.find(u => u.username === username);
+  if (!target) { alert('找不到帳號資料'); return; }
+  if (!confirm(`確定要以「${target.displayName || target.username}」(${target.username}) 的身份進行瀏覽？\n\n可點擊頂部橫幅的「返回管理者」按鈕切換回來。`)) return;
+
+  // 儲存原始管理者身份
+  adminUser = { ...currentUser };
+
+  // 切換為目標帳號
+  currentUser = { ...target };
+
+  // 重置統計快取（避免看到 admin 的快取資料）
+  statsCache = null;
+  statsOpen  = false;
+
+  // 關閉帳號管理 Drawer
+  closeUserMgr();
+
+  // 顯示變身橫幅
+  const banner = document.getElementById('impersonateBanner');
+  document.getElementById('impersonateLabel').textContent =
+    `${target.displayName || target.username}（${target.username}）`;
+  banner.classList.add('show');
+
+  // 重新初始化畫面
+  initAfterLogin();
+}
+
+function exitImpersonate() {
+  if (!adminUser) return;
+
+  // 還原管理者身份
+  currentUser = { ...adminUser };
+  adminUser   = null;
+
+  // 重置統計快取
+  statsCache = null;
+  statsOpen  = false;
+
+  // 隱藏橫幅
+  document.getElementById('impersonateBanner').classList.remove('show');
+
+  // 重新初始化畫面
+  initAfterLogin();
+}
+
 // ====== 產品線 ======
 function openProductModal(){document.getElementById('newProductName').value='';document.getElementById('productModal').style.display='block';}
 function closeProductModal(){document.getElementById('productModal').style.display='none';}
@@ -982,6 +1118,288 @@ function onCycleToggle(type){setCycleUI(type);const sv=document.getElementById('
 function addYM(){const v=document.getElementById('manualYM').value;if(v&&!editingYMList.includes(v)){editingYMList.push(v);editingYMList.sort();renderYMList();}}
 function removeYM(ym){editingYMList=editingYMList.filter(x=>x!==ym);renderYMList();}
 function renderYMList(){document.getElementById('ymList').innerHTML=editingYMList.map(ym=>`<div class="ym-tag">${ym}<span onclick="removeYM('${ym}')" style="cursor:pointer;color:var(--danger);font-weight:bold;">×</span></div>`).join('');}
+
+
+// ====== 統計分析 ======
+let statsOpen = false;
+let statsCache = null;
+let statsLoading = false;
+
+function toggleStats() {
+  statsOpen = !statsOpen;
+  const body  = document.getElementById('statsBody');
+  const arrow = document.getElementById('statsArrow');
+  body.style.display  = statsOpen ? 'block' : 'none';
+  arrow.classList.toggle('open', statsOpen);
+  if (statsOpen && !statsCache && !statsLoading) loadStats();
+}
+
+async function loadStats() {
+  if (statsLoading) return;
+  statsLoading = true;
+  try {
+    // 業務角色傳入自己的 salesFilter，super/工程師 不傳（看全部）
+    const salesFilter = (isSales() && !isSuper() && !canViewAll())
+      ? encodeURIComponent((currentUser.displayName || currentUser.username).trim())
+      : '';
+    const statsUrl = apiURL(`&action=getStats&branch=${currentBranchFilter || 'KH'}`) +
+      (salesFilter ? `&salesFilter=${salesFilter}` : '');
+    const resp = await fetch(statsUrl);
+    const r = await resp.json();
+    if (r.status === 'error') throw new Error(r.message);
+    statsCache = r;
+    renderStats(r);
+  } catch(e) {
+    document.getElementById('expiryList').innerHTML   = `<div class="trend-empty">載入失敗：${e.message}</div>`;
+    document.getElementById('engBarChart').innerHTML  = '';
+    document.getElementById('trendChartWrap').innerHTML = '';
+  } finally {
+    statsLoading = false;
+  }
+}
+
+// 分公司切換後清除快取，重新取得統計
+async function onBranchFilterChange() {
+  currentBranchFilter = document.getElementById('branchFilter').value;
+  document.getElementById('thBranch').style.display = currentBranchFilter === 'ALL' ? '' : 'none';
+  statsCache = null;
+  if (statsOpen) loadStats();
+  await load();
+}
+
+function renderStats(data) {
+  // 業務角色（非 admin / 非主管級）：隱藏工程師工作量及月度完工趨勢
+  const isSalesOnly = isSales() && !isSuper() && !canViewAll();
+  const engCard   = document.getElementById('engBarCard');
+  const trendCard = document.getElementById('trendCard');
+  const grid      = document.querySelector('.stats-charts-grid');
+  if (isSalesOnly) {
+    if (engCard)   engCard.style.display   = 'none';
+    if (trendCard) trendCard.style.display = 'none';
+    if (grid)      grid.style.gridTemplateColumns = '1fr';
+  } else {
+    if (engCard)   engCard.style.display   = '';
+    if (trendCard) trendCard.style.display = '';
+    if (grid)      grid.style.gridTemplateColumns = '';
+  }
+
+  // 業務端二次過濾：僅顯示屬於自己的到期預警
+  let expiryItems = data.expiring || [];
+  if (isSalesOnly) {
+    const myN  = (currentUser.displayName || currentUser.username).toLowerCase().trim();
+    const mySK = (currentUser.salesKey || '').toLowerCase().trim();
+    expiryItems = expiryItems.filter(it => {
+      const sn = (it.salesName || '').toLowerCase().trim();
+      return sn === myN || (mySK && sn === mySK);
+    });
+  }
+
+  renderExpiryList(expiryItems, isSalesOnly);
+  renderEngBar(data.engineerLoad || [], data.totalRecords || 0, data.dataFrom || '', data.dataTo || '');
+  renderTrendChart(data.monthlyTrend || []);
+}
+
+
+// ① 合約到期預警
+function renderExpiryList(items, salesOnly) {
+  const el = document.getElementById('expiryList');
+  if (!items.length) {
+    el.innerHTML = '<div class="trend-empty" style="padding:30px 0;">✅ 無合約到期預警</div>';
+    return;
+  }
+  const rows = items.map(it => {
+    let cls, label;
+    if (it.daysLeft < 0)      { cls = 'expiry-red';    label = `已逾期<br>${Math.abs(it.daysLeft)}天`; }
+    else if (it.daysLeft <= 30){ cls = 'expiry-red';    label = `${it.daysLeft}<br>天後`; }
+    else if (it.daysLeft <= 60){ cls = 'expiry-orange'; label = `${it.daysLeft}<br>天後`; }
+    else                       { cls = 'expiry-yellow'; label = `${it.daysLeft}<br>天後`; }
+    const brTag = it.branch ? `<span class="branch-badge ${it.branch==='TN'?'branch-tn':'branch-kh'}" style="font-size:9px;padding:1px 5px;">${it.branch}</span>` : '';
+    return `<div class="expiry-item">
+      <div class="expiry-badge ${cls}">${label}</div>
+      <div class="expiry-info">
+        <div class="expiry-customer">${it.customer} ${brTag}</div>
+        <div class="expiry-meta">${it.product} ｜ ${it.salesName||'-'} ｜ 訖：${it.endDate}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = rows;
+}
+
+// ② 工程師工作量橫條圖
+const BAR_COLORS = ['#4361ee','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'];
+function renderEngBar(list, total, dataFrom, dataTo) {
+  const el    = document.getElementById('engBarChart');
+  const range = document.getElementById('engBarRange');
+  // 統計區間標示：現行有效合約（訖日 >= 今日）
+  if (range) {
+    range.textContent = dataFrom && dataTo
+      ? `現行有效合約 ${dataFrom} ~ ${dataTo}`
+      : '現行有效合約';
+    range.title = '統計範圍：訖日 ≥ 今日的現行合約（不含已到期），起始日為最早的合約簽約日';
+  }
+  if (!list.length) { el.innerHTML = '<div class="trend-empty">無資料</div>'; return; }
+  el.innerHTML = list.map((eng, i) => `
+    <div class="eng-bar-row">
+      <div class="eng-bar-name" title="${eng.name}">${eng.name}</div>
+      <div class="eng-bar-track">
+        <div class="eng-bar-fill" style="width:${eng.pct}%;background:${BAR_COLORS[i % BAR_COLORS.length]};">${eng.pct > 10 ? eng.pct + '%' : ''}</div>
+      </div>
+      <div class="eng-bar-count">${eng.count} 筆</div>
+    </div>`).join('');
+}
+
+// ③ 月度完工趨勢折線圖（純 SVG + HTML tooltip）
+function renderTrendChart(data) {
+  const wrap = document.getElementById('trendChartWrap');
+  if (!data.length) { wrap.innerHTML = '<div class="trend-empty">尚無歷史月份資料</div>'; return; }
+
+  const W = 460, H = 200, PL = 40, PR = 28, PT = 14, PB = 48;
+  const cW = W - PL - PR, cH = H - PT - PB;
+  const n  = data.length;
+  const maxTotal = Math.max(...data.map(d => d.total), 1);
+
+  // 整體完工率
+  const totT = data.reduce((s,d) => s + d.total, 0);
+  const totD = data.reduce((s,d) => s + d.done, 0);
+  document.getElementById('trendOverall').textContent =
+    totT > 0 ? `整體完工率 ${Math.round(totD/totT*100)}%（${totD}/${totT}）` : '';
+
+  function xPos(i) { return PL + (n === 1 ? cW/2 : i / (n-1) * cW); }
+  function yTotal(v) { return PT + cH - (v / maxTotal * cH); }
+
+  // Y 軸刻度
+  const ySteps = 4;
+  let yGridLines = '';
+  for (let s = 0; s <= ySteps; s++) {
+    const v = Math.round(maxTotal * s / ySteps);
+    const y = yTotal(v);
+    yGridLines += `<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#e2e8f0" stroke-width="1"/>`;
+    yGridLines += `<text x="${PL-6}" y="${y+4}" text-anchor="end" font-size="10" fill="#94a3b8">${v}</text>`;
+  }
+
+  // 柱狀（total 淡藍底）
+  const barW = Math.max(4, Math.min(28, cW / n * 0.5));
+  const bars = data.map((d, i) => {
+    const x = xPos(i), yT = yTotal(d.total), yD = yTotal(d.done);
+    return `
+      <rect x="${x - barW/2}" y="${yT}" width="${barW}" height="${PT+cH-yT}" rx="3" fill="#e0e7ff" opacity=".7"/>
+      <rect x="${x - barW/2}" y="${yD}" width="${barW}" height="${PT+cH-yD}" rx="3" fill="#4361ee" opacity=".85"/>`;
+  }).join('');
+
+  // 完工率折線
+  const ratePoints = data.map((d, i) => {
+    const r = d.total > 0 ? d.rate : null;
+    if (r === null) return null;
+    return { x: xPos(i), y: PT + cH - (r / 100 * cH), r, i };
+  });
+  let ratePath = '';
+  ratePoints.forEach(p => {
+    if (!p) return;
+    ratePath += (ratePath === '' ? `M ${p.x},${p.y}` : ` L ${p.x},${p.y}`);
+  });
+
+  // X 軸標籤
+  const xLabels = data.map((d, i) => {
+    const x = xPos(i);
+    const lbl = d.ym.slice(5) + '月';
+    return `<text x="${x}" y="${H-PB+18}" text-anchor="middle" font-size="10" fill="#64748b">${lbl}</text>
+            <text x="${x}" y="${H-PB+30}" text-anchor="middle" font-size="9" fill="#94a3b8">${d.ym.slice(0,4)}</text>`;
+  }).join('');
+
+  // 完工率節點（大一點，易懸停）
+  const dots = ratePoints.filter(Boolean).map(p => {
+    const d = data[p.i];
+    return `<circle class="trend-dot" cx="${p.x}" cy="${p.y}" r="5" fill="#10b981" stroke="#fff" stroke-width="2"
+              data-ym="${d.ym}" data-done="${d.done}" data-total="${d.total}" data-rate="${p.r}"/>`;
+  }).join('');
+
+  // 透明懸停感應區（每個資料點的寬條帶）
+  const hitAreas = data.map((d, i) => {
+    const x = xPos(i);
+    const colW = n > 1 ? cW / (n - 1) : cW;
+    return `<rect class="trend-hit" x="${x - colW/2}" y="${PT}" width="${colW}" height="${cH}"
+              fill="transparent" data-idx="${i}"
+              data-ym="${d.ym}" data-done="${d.done}" data-total="${d.total}" data-rate="${d.total>0?d.rate:'-'}"/>`;
+  }).join('');
+
+  // 圖例
+  const legend = `
+    <g transform="translate(${PL},${H-8})">
+      <rect x="0" y="-8" width="10" height="10" rx="2" fill="#e0e7ff"/>
+      <text x="14" y="1" font-size="10" fill="#64748b">需維護筆數</text>
+      <rect x="88" y="-8" width="10" height="10" rx="2" fill="#4361ee" opacity=".85"/>
+      <text x="102" y="1" font-size="10" fill="#64748b">已完工筆數</text>
+      <circle cx="188" cy="-3" r="4" fill="#10b981"/>
+      <text x="196" y="1" font-size="10" fill="#64748b">完工率折線</text>
+    </g>`;
+
+  // 完工率右軸
+  const rateAxis = [0,25,50,75,100].map(v => {
+    const y = PT + cH - (v/100*cH);
+    return `<text x="${W-PR+6}" y="${y+4}" font-size="9" fill="#10b981">${v}%</text>`;
+  }).join('');
+
+  wrap.innerHTML = `
+    <div style="position:relative;display:inline-block;width:100%;">
+      <svg id="trendChart" viewBox="0 0 ${W} ${H}" style="width:100%;display:block;">
+        ${yGridLines}
+        ${bars}
+        ${ratePath ? `<path d="${ratePath}" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linejoin="round"/>` : ''}
+        ${dots}
+        <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+cH}" stroke="#cbd5e1" stroke-width="1"/>
+        <line x1="${PL}" y1="${PT+cH}" x2="${W-PR}" y2="${PT+cH}" stroke="#cbd5e1" stroke-width="1"/>
+        ${xLabels}
+        ${rateAxis}
+        ${legend}
+        ${hitAreas}
+      </svg>
+      <div id="trendTooltip" style="
+        display:none;position:absolute;pointer-events:none;
+        background:rgba(15,23,42,.88);color:#fff;
+        border-radius:8px;padding:8px 12px;font-size:.8rem;line-height:1.6;
+        white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:10;
+      "></div>
+    </div>`;
+
+  // --- Tooltip 互動 ---
+  const svg     = wrap.querySelector('#trendChart');
+  const tip     = wrap.querySelector('#trendTooltip');
+  const svgRect = () => svg.getBoundingClientRect();
+
+  function showTip(evt, d) {
+    const r  = svgRect();
+    const vbW = W, vbH = H;
+    // 把滑鼠座標轉成 SVG viewBox 座標再反算百分比位置
+    const pctX = (evt.clientX - r.left) / r.width;
+    const pctY = (evt.clientY - r.top)  / r.height;
+    const rate  = d.dataset.rate !== '-' ? d.dataset.rate + '%' : '－';
+    const done  = d.dataset.done;
+    const total = d.dataset.total;
+    const ym    = d.dataset.ym;
+    tip.innerHTML =
+      `<div style="font-weight:700;margin-bottom:3px;">${ym.slice(0,4)} 年 ${ym.slice(5)} 月</div>` +
+      `<div>需維護：<b>${total}</b> 筆</div>` +
+      `<div>已完工：<b style="color:#6ee7b7;">${done}</b> 筆</div>` +
+      `<div>完工率：<b style="color:#34d399;">${rate}</b></div>`;
+    tip.style.display = 'block';
+    // 定位：預設在右上方，靠邊時翻轉
+    const tipW = tip.offsetWidth  || 140;
+    const tipH = tip.offsetHeight || 80;
+    let left = evt.clientX - r.left + 12;
+    let top  = evt.clientY - r.top  - tipH - 10;
+    if (left + tipW > r.width  - 8) left = evt.clientX - r.left - tipW - 12;
+    if (top < 4) top = evt.clientY - r.top + 14;
+    tip.style.left = left + 'px';
+    tip.style.top  = top  + 'px';
+  }
+
+  wrap.querySelectorAll('.trend-hit').forEach(el => {
+    el.addEventListener('mouseenter', e => showTip(e, el));
+    el.addEventListener('mousemove',  e => showTip(e, el));
+    el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
+}
+// ====== 統計分析結束 ======
 
 // ====== 初始化 ======
 document.addEventListener('DOMContentLoaded',()=>{
