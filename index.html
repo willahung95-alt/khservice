@@ -119,10 +119,18 @@
     .log-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;border-top:1px dashed var(--border);padding-top:8px;}
 
     /* 操作日誌 */
-    .op-table{width:100%;min-width:820px;border-collapse:collapse;font-size:.82rem;}
-    .op-table th{background:#f8fafc;padding:8px 10px;border-bottom:2px solid var(--border);text-align:left;color:var(--text-muted);white-space:nowrap;}
-    .op-table td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
-    .op-table td:last-child{white-space:normal;min-width:140px;}
+    .op-table{width:100%;min-width:860px;border-collapse:collapse;font-size:.82rem;table-layout:fixed;}
+    .op-table th{background:#f8fafc;padding:8px 10px;border-bottom:2px solid var(--border);text-align:left;color:var(--text-muted);white-space:nowrap;overflow:hidden;}
+    .op-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word;}
+    .op-table col.c-time   {width:130px;}
+    .op-table col.c-user   {width:80px;}
+    .op-table col.c-name   {width:80px;}
+    .op-table col.c-branch {width:60px;}
+    .op-table col.c-type   {width:78px;}
+    .op-table col.c-target {width:200px;}
+    .op-table col.c-detail {width:auto;}
+    .op-table td.c-target  {color:var(--text-main);font-weight:500;}
+    .op-table td.c-detail  {color:var(--text-muted);}
     .op-type-chip{padding:2px 7px;border-radius:10px;font-size:.73rem;font-weight:700;}
     .op-add{background:#d1fae5;color:#065f46;}.op-edit{background:#dbeafe;color:#1e40af;}
     .op-delete{background:#fee2e2;color:#991b1b;}.op-done{background:#fef3c7;color:#92400e;}.op-login{background:#f3e8ff;color:#6b21a8;}
@@ -1230,7 +1238,18 @@ function renderOpLog(){
   const filtered=allOpLogs.filter(l=>(!t||l.opType===t)&&(!br||l.branch===br)&&(!q||l.username.toLowerCase().includes(q)||l.displayName.toLowerCase().includes(q)||l.target.toLowerCase().includes(q)));
   const tc={'登入':'op-login','新增維護':'op-add','編輯維護':'op-edit','刪除維護':'op-delete','完工申報':'op-done','取消完工':'op-done','修改密碼':'op-edit','新增帳號':'op-add','編輯帳號':'op-edit','刪除帳號':'op-delete','新增產品線':'op-add','新增日誌':'op-add','編輯日誌':'op-edit','刪除日誌':'op-delete'};
   if(filtered.length===0){document.getElementById('opLogContent').innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;">尚無紀錄</div>';return;}
-  document.getElementById('opLogContent').innerHTML=`<table class="op-table"><thead><tr><th>時間</th><th>帳號</th><th>姓名</th><th>分公司</th><th>類型</th><th>對象</th><th>詳情</th></tr></thead><tbody>${filtered.map(l=>`<tr><td>${l.time}</td><td>${l.username}</td><td>${l.displayName}</td><td><span class="branch-badge ${l.branch==='TN'?'branch-tn':'branch-kh'}" style="font-size:10px;">${l.branch||'KH'}</span></td><td><span class="op-type-chip ${tc[l.opType]||''}">${l.opType}</span></td><td>${l.target}</td><td style="color:var(--text-muted);">${l.detail}</td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('opLogContent').innerHTML=`<table class="op-table">
+    <colgroup><col class="c-time"><col class="c-user"><col class="c-name"><col class="c-branch"><col class="c-type"><col class="c-target"><col class="c-detail"></colgroup>
+    <thead><tr><th>時間</th><th>帳號</th><th>姓名</th><th>分公司</th><th>類型</th><th>對象</th><th>詳情</th></tr></thead>
+    <tbody>${filtered.map(l=>`<tr>
+      <td style="white-space:nowrap;">${l.time}</td>
+      <td style="white-space:nowrap;">${l.username}</td>
+      <td style="white-space:nowrap;">${l.displayName}</td>
+      <td style="white-space:nowrap;"><span class="branch-badge ${l.branch==='TN'?'branch-tn':'branch-kh'}" style="font-size:10px;">${l.branch||'KH'}</span></td>
+      <td style="white-space:nowrap;"><span class="op-type-chip ${tc[l.opType]||''}">${l.opType}</span></td>
+      <td class="c-target">${l.target}</td>
+      <td class="c-detail">${l.detail}</td>
+    </tr>`).join('')}</tbody></table>`;
 }
 document.getElementById('opLogSearch').oninput=renderOpLog;
 document.getElementById('opTypeFilter').onchange=renderOpLog;
