@@ -100,7 +100,6 @@
     .overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px);z-index:999;display:none;}
     .drawer{position:fixed;right:-100%;top:0;width:100%;max-width:700px;height:100%;background:#fff;z-index:1000;transition:right .3s ease;padding:2rem;overflow-y:auto;}
     .drawer.open{right:0;}
-    #opLogDrawer{max-width:1000px;}
     .modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:1.5rem;border-radius:var(--radius-lg);z-index:1100;width:90%;max-width:460px;display:none;box-shadow:0 20px 50px rgba(0,0,0,.2);}
     .ym-manager{margin-top:10px;border:1px solid var(--border);border-radius:8px;padding:10px;background:#f8fafc;}
     .ym-list{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
@@ -119,10 +118,63 @@
     .log-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;border-top:1px dashed var(--border);padding-top:8px;}
 
     /* 操作日誌 */
-    .op-table{width:100%;min-width:820px;border-collapse:collapse;font-size:.82rem;}
-    .op-table th{background:#f8fafc;padding:8px 10px;border-bottom:2px solid var(--border);text-align:left;color:var(--text-muted);white-space:nowrap;}
-    .op-table td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
-    .op-table td:last-child{white-space:normal;min-width:140px;}
+    /* ====== 操作日誌全螢幕 Modal ====== */
+    #opLogModal{
+      display:none;position:fixed;inset:0;z-index:2000;
+      background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+      align-items:center;justify-content:center;
+    }
+    #opLogModal.open{display:flex;}
+    #opLogModalBox{
+      background:#fff;border-radius:var(--radius-lg);
+      width:92vw;max-width:1300px;
+      height:88vh;max-height:88vh;
+      display:flex;flex-direction:column;
+      box-shadow:0 25px 60px rgba(0,0,0,.25);
+      overflow:hidden;
+    }
+    #opLogModalHeader{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1.1rem 1.5rem;border-bottom:1px solid var(--border);
+      flex-shrink:0;
+    }
+    #opLogModalFilters{
+      padding:.75rem 1.5rem;border-bottom:1px solid var(--border);
+      display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+      flex-shrink:0;background:#fafafa;
+    }
+    #opLogModalBody{
+      flex:1;overflow-y:auto;overflow-x:auto;
+      padding:0;
+    }
+    /* 操作日誌表格：nowrap 全欄，不再斷行 */
+    .op-table{
+      width:100%;border-collapse:collapse;
+      font-size:.84rem;white-space:nowrap;
+    }
+    .op-table thead{position:sticky;top:0;z-index:1;}
+    .op-table th{
+      background:#f8fafc;padding:10px 14px;
+      border-bottom:2px solid var(--border);
+      text-align:left;color:var(--text-muted);
+      font-size:.8rem;font-weight:600;
+    }
+    .op-table td{
+      padding:9px 14px;border-bottom:1px solid var(--border);
+      vertical-align:middle;
+    }
+    .op-table tbody tr:hover{background:#f8fafc;}
+    /* 各欄固定寬度（不折行）*/
+    .op-col-time   {min-width:148px;}
+    .op-col-account{min-width:80px;}
+    .op-col-name   {min-width:90px;}
+    .op-col-branch {min-width:70px;text-align:center;}
+    .op-col-type   {min-width:88px;}
+    .op-col-target {min-width:200px;max-width:280px;
+                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .op-col-detail {min-width:260px;max-width:380px;
+                    white-space:normal;line-height:1.55;
+                    color:var(--text-muted);}
     .op-type-chip{padding:2px 7px;border-radius:10px;font-size:.73rem;font-weight:700;}
     .op-add{background:#d1fae5;color:#065f46;}.op-edit{background:#dbeafe;color:#1e40af;}
     .op-delete{background:#fee2e2;color:#991b1b;}.op-done{background:#fef3c7;color:#92400e;}.op-login{background:#f3e8ff;color:#6b21a8;}
@@ -421,7 +473,7 @@
 <div class="drawer" id="drawer">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
     <h2 id="drawerTitle" style="margin:0">維護編輯</h2>
-    <button class="btn btn-outline" style="padding:5px;border-radius:50%" onclick="closeDrawer();closeHistoryDrawer();closeOpLog();closeUserMgr();"><span class="material-symbols-rounded">close</span></button>
+    <button class="btn btn-outline" style="padding:5px;border-radius:50%" onclick="closeDrawer();closeHistoryDrawer();closeUserMgr();"><span class="material-symbols-rounded">close</span></button>
   </div>
   <form id="formEdit">
     <div id="maintenanceFields">
@@ -537,15 +589,53 @@
   <div style="display:flex;gap:10px;"><button class="btn btn-primary" style="flex:1;" id="cpSaveBtn" onclick="doChangePwd()">確認修改</button><button class="btn btn-outline" style="flex:1;" onclick="closeChangePwd()">取消</button></div>
 </div>
 
-<!-- 操作日誌 Drawer -->
-<div class="drawer" id="opLogDrawer">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;"><h2 style="margin:0;">操作日誌</h2><button class="btn btn-outline" style="padding:5px;border-radius:50%" onclick="closeOpLog()"><span class="material-symbols-rounded">close</span></button></div>
-  <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
-    <input type="text" id="opLogSearch" placeholder="搜尋帳號、姓名、對象..." style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;outline:none;font-size:.85rem;">
-    <select id="opTypeFilter" class="btn btn-outline" style="font-size:.82rem;"><option value="">全部類型</option><option value="登入">登入</option><option value="新增維護">新增維護</option><option value="編輯維護">編輯維護</option><option value="刪除維護">刪除維護</option><option value="完工申報">完工申報</option><option value="暫緩申報">暫緩申報</option><option value="取消申報">取消申報</option><option value="取消完工">取消完工</option><option value="修改密碼">修改密碼</option><option value="新增帳號">新增帳號</option><option value="編輯帳號">編輯帳號</option><option value="刪除帳號">刪除帳號</option><option value="新增產品線">新增產品線</option><option value="新增日誌">新增日誌</option></select>
-    <select id="opBranchFilter" class="btn btn-outline" style="font-size:.82rem;"><option value="">全部分公司</option><option value="KH">高雄 KH</option><option value="TN">台南 TN</option></select>
+<!-- ====== 操作日誌全螢幕 Modal ====== -->
+<div id="opLogModal" onclick="handleOpLogModalBg(event)">
+  <div id="opLogModalBox">
+    <!-- Header -->
+    <div id="opLogModalHeader">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="material-symbols-rounded" style="color:var(--primary);font-size:22px;">manage_history</span>
+        <h2 style="margin:0;font-size:1.1rem;">操作日誌</h2>
+        <span id="opLogCount" style="font-size:.78rem;color:var(--text-muted);background:#f1f5f9;padding:2px 8px;border-radius:10px;"></span>
+      </div>
+      <button class="btn btn-outline" style="padding:6px;border-radius:50%;" onclick="closeOpLog()">
+        <span class="material-symbols-rounded">close</span>
+      </button>
+    </div>
+    <!-- Filters -->
+    <div id="opLogModalFilters">
+      <span class="material-symbols-rounded" style="color:var(--text-muted);font-size:18px;">search</span>
+      <input type="text" id="opLogSearch" placeholder="搜尋帳號、姓名、對象..."
+        style="flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;outline:none;font-size:.85rem;">
+      <select id="opTypeFilter" class="btn btn-outline" style="font-size:.82rem;">
+        <option value="">全部類型</option>
+        <option value="登入">登入</option>
+        <option value="新增維護">新增維護</option>
+        <option value="編輯維護">編輯維護</option>
+        <option value="刪除維護">刪除維護</option>
+        <option value="完工申報">完工申報</option>
+        <option value="暫緩申報">暫緩申報</option>
+        <option value="取消申報">取消申報</option>
+        <option value="取消完工">取消完工</option>
+        <option value="修改密碼">修改密碼</option>
+        <option value="新增帳號">新增帳號</option>
+        <option value="編輯帳號">編輯帳號</option>
+        <option value="刪除帳號">刪除帳號</option>
+        <option value="新增產品線">新增產品線</option>
+        <option value="新增日誌">新增日誌</option>
+      </select>
+      <select id="opBranchFilter" class="btn btn-outline" style="font-size:.82rem;">
+        <option value="">全部分公司</option>
+        <option value="KH">高雄 KH</option>
+        <option value="TN">台南 TN</option>
+      </select>
+    </div>
+    <!-- Table body -->
+    <div id="opLogModalBody">
+      <div id="opLogContent"></div>
+    </div>
   </div>
-  <div id="opLogContent" style="overflow-x:auto;"></div>
 </div>
 
 <!-- 帳號管理 Drawer -->
@@ -1252,8 +1342,23 @@ function editLogEntry(version){const log=systemLogs.find(l=>l.version===version)
 async function deleteLogEntry(version){if(!confirm(`確定刪除版本 ${version} 的日誌？`))return;const payload={action:'deleteLog',role:currentUser.role,user:currentUser.username,displayName:currentUser.displayName,data:{targetVersion:version}};await sendPayload(payload,()=>openSystemLog('view'));}
 
 // ====== 操作日誌 ======
-async function openOpLog(){if(!isSuper())return;try{const resp=await fetch(apiURL('&action=getOpLogs'));const r=await resp.json();allOpLogs=r.opLogs||[];}catch(e){allOpLogs=[];}renderOpLog();document.getElementById('opLogDrawer').classList.add('open');document.getElementById('overlay').style.display='block';}
-function closeOpLog(){document.getElementById('opLogDrawer').classList.remove('open');document.getElementById('overlay').style.display='none';}
+async function openOpLog(){
+  if(!isSuper())return;
+  document.getElementById('opLogModal').classList.add('open');
+  document.getElementById('opLogContent').innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8;"><span class="material-symbols-rounded" style="font-size:36px;display:block;margin-bottom:8px;">hourglass_empty</span>載入中...</div>';
+  try{
+    const resp=await fetch(apiURL('&action=getOpLogs'));
+    const r=await resp.json();
+    allOpLogs=r.opLogs||[];
+  }catch(e){allOpLogs=[];}
+  renderOpLog();
+}
+function handleOpLogModalBg(e){
+  if(e.target===document.getElementById('opLogModal'))closeOpLog();
+}
+function closeOpLog(){
+  document.getElementById('opLogModal').classList.remove('open');
+}
 function renderOpLog(){
   const q=document.getElementById('opLogSearch').value.toLowerCase();
   const t=document.getElementById('opTypeFilter').value;
@@ -1261,7 +1366,51 @@ function renderOpLog(){
   const filtered=allOpLogs.filter(l=>(!t||l.opType===t)&&(!br||l.branch===br)&&(!q||l.username.toLowerCase().includes(q)||l.displayName.toLowerCase().includes(q)||l.target.toLowerCase().includes(q)));
   const tc={'登入':'op-login','新增維護':'op-add','編輯維護':'op-edit','刪除維護':'op-delete','完工申報':'op-done','取消完工':'op-done','修改密碼':'op-edit','新增帳號':'op-add','編輯帳號':'op-edit','刪除帳號':'op-delete','新增產品線':'op-add','新增日誌':'op-add','編輯日誌':'op-edit','刪除日誌':'op-delete'};
   if(filtered.length===0){document.getElementById('opLogContent').innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;">尚無紀錄</div>';return;}
-  document.getElementById('opLogContent').innerHTML=`<table class="op-table"><thead><tr><th>時間</th><th>帳號</th><th>姓名</th><th>分公司</th><th>類型</th><th>對象</th><th>詳情</th></tr></thead><tbody>${filtered.map(l=>`<tr><td>${l.time}</td><td>${l.username}</td><td>${l.displayName}</td><td><span class="branch-badge ${l.branch==='TN'?'branch-tn':'branch-kh'}" style="font-size:10px;">${l.branch||'KH'}</span></td><td><span class="op-type-chip ${tc[l.opType]||''}">${l.opType}</span></td><td>${l.target}</td><td style="color:var(--text-muted);">${l.detail}</td></tr>`).join('')}</tbody></table>`;
+  // 詳情欄：將 key:value 分行顯示
+  function fmtDetail(d){
+    if(!d||d==='-')return '<span style="color:#cbd5e1;">—</span>';
+    return d.split(' ').map(seg=>{
+      const idx=seg.indexOf(':');
+      if(idx>0)return `<span style="color:var(--text-muted);font-size:.78rem;">${seg.slice(0,idx+1)}</span><span style="color:var(--text-soft);font-weight:600;">${seg.slice(idx+1)}</span>`;
+      return `<span>${seg}</span>`;
+    }).join('<br>');
+  }
+  // 對象欄：客戶/產品拆開顯示
+  function fmtTarget(t){
+    if(!t||t==='-')return '<span style="color:#cbd5e1;">—</span>';
+    const slash=t.indexOf('/');
+    if(slash>0)return `<div style="font-weight:700;">${t.slice(0,slash)}</div><div style="font-size:.78rem;color:var(--text-muted);margin-top:2px;">${t.slice(slash+1)}</div>`;
+    return `<span style="font-weight:600;">${t}</span>`;
+  }
+  // 更新計數
+  const countEl=document.getElementById('opLogCount');
+  if(countEl) countEl.textContent=`共 ${filtered.length} 筆`;
+  document.getElementById('opLogContent').innerHTML=
+    `<table class="op-table">
+      <thead><tr>
+        <th class="op-col-time">時間</th>
+        <th class="op-col-account">帳號</th>
+        <th class="op-col-name">姓名</th>
+        <th class="op-col-branch">分公司</th>
+        <th class="op-col-type">類型</th>
+        <th class="op-col-target">對象</th>
+        <th class="op-col-detail">詳情</th>
+      </tr></thead>
+      <tbody>
+        ${filtered.map(l=>{
+          const tgt=l.target&&l.target!=='-'?l.target:'';
+          return `<tr>
+            <td class="op-col-time">${l.time}</td>
+            <td class="op-col-account" style="color:var(--text-muted);">${l.username}</td>
+            <td class="op-col-name" style="font-weight:600;">${l.displayName}</td>
+            <td class="op-col-branch"><span class="branch-badge ${l.branch==='TN'?'branch-tn':'branch-kh'}" style="font-size:10px;">${l.branch||'KH'}</span></td>
+            <td class="op-col-type"><span class="op-type-chip ${tc[l.opType]||''}">${l.opType}</span></td>
+            <td class="op-col-target" title="${tgt}">${fmtTarget(l.target)}</td>
+            <td class="op-col-detail">${fmtDetail(l.detail)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
 }
 document.getElementById('opLogSearch').oninput=renderOpLog;
 document.getElementById('opTypeFilter').onchange=renderOpLog;
@@ -2007,6 +2156,11 @@ function downloadHistoryCsv() {
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('monthPick').value=new Date().toISOString().slice(0,7);
   document.getElementById('loginPwd').addEventListener('keyup',e=>{if(e.key==='Enter')doLogin();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('opLogModal').classList.contains('open')) closeOpLog();
+  }
+});
   document.getElementById('loginUser').addEventListener('keyup',e=>{if(e.key==='Enter')document.getElementById('loginPwd').focus();});
   // 頁面重新整理時自動還原登入狀態（sessionStorage 關閉分頁後自動清除）
   if(restoreSession()) initAfterLogin();
