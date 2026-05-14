@@ -814,6 +814,9 @@ async function sendPayload(payload,successCb,btnEl){
         }
       }
       render();
+      // 清除統計快取，確保月度完工趨勢同步更新
+      statsCache = null;
+      if (statsOpen) loadStats();
       if(successCb)successCb();
       return;
     }
