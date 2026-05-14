@@ -119,18 +119,10 @@
     .log-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;border-top:1px dashed var(--border);padding-top:8px;}
 
     /* 操作日誌 */
-    .op-table{width:100%;min-width:860px;border-collapse:collapse;font-size:.82rem;table-layout:fixed;}
-    .op-table th{background:#f8fafc;padding:8px 10px;border-bottom:2px solid var(--border);text-align:left;color:var(--text-muted);white-space:nowrap;overflow:hidden;}
-    .op-table td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:top;word-break:break-word;}
-    .op-table col.c-time   {width:130px;}
-    .op-table col.c-user   {width:80px;}
-    .op-table col.c-name   {width:80px;}
-    .op-table col.c-branch {width:60px;}
-    .op-table col.c-type   {width:78px;}
-    .op-table col.c-target {width:200px;}
-    .op-table col.c-detail {width:auto;}
-    .op-table td.c-target  {color:var(--text-main);font-weight:500;}
-    .op-table td.c-detail  {color:var(--text-muted);}
+    .op-table{width:100%;min-width:820px;border-collapse:collapse;font-size:.82rem;}
+    .op-table th{background:#f8fafc;padding:8px 10px;border-bottom:2px solid var(--border);text-align:left;color:var(--text-muted);white-space:nowrap;}
+    .op-table td{padding:7px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    .op-table td:last-child{white-space:normal;min-width:140px;}
     .op-type-chip{padding:2px 7px;border-radius:10px;font-size:.73rem;font-weight:700;}
     .op-add{background:#d1fae5;color:#065f46;}.op-edit{background:#dbeafe;color:#1e40af;}
     .op-delete{background:#fee2e2;color:#991b1b;}.op-done{background:#fef3c7;color:#92400e;}.op-login{background:#f3e8ff;color:#6b21a8;}
@@ -184,7 +176,24 @@
     .eng-bar-fill{height:100%;border-radius:100px;display:flex;align-items:center;justify-content:flex-end;padding-right:8px;font-size:11px;font-weight:700;color:#fff;transition:width .6s ease;min-width:32px;}
     .eng-bar-count{width:44px;text-align:right;font-size:.82rem;font-weight:700;color:var(--text-muted);flex-shrink:0;}
     /* 月度完工趨勢 — SVG 折線圖 */
-    #trendChart{width:100%;overflow:visible;}
+    /* 月度完工趨勢 — 切換 tab */
+    .trend-tab-bar{display:flex;gap:4px;margin-bottom:10px;}
+    .trend-tab{padding:4px 14px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:#f8fafc;color:var(--text-muted);transition:.15s;}
+    .trend-tab.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+    /* 月度細部數據表 */
+    .trend-data-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+    .trend-data-table th{background:#f0f4ff;color:var(--primary);font-weight:700;padding:7px 10px;text-align:center;border-bottom:2px solid #c7d2fe;white-space:nowrap;}
+    .trend-data-table th:first-child{text-align:left;}
+    .trend-data-table td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;}
+    .trend-data-table td:first-child{text-align:left;font-weight:600;color:var(--text-main);}
+    .trend-data-table tr:last-child td{border-bottom:none;font-weight:700;background:#f8fafc;color:var(--primary);}
+    .trend-data-table .cell-done{color:#059669;font-weight:700;}
+    .trend-data-table .cell-deferred{color:#d97706;font-weight:600;}
+    .trend-data-table .cell-pending{color:#94a3b8;}
+    .trend-data-table .cell-rate{color:#059669;font-weight:700;}
+    .trend-data-table .cell-total{color:var(--primary);font-weight:700;}
+    .trend-export-btn{padding:4px 12px;font-size:.78rem;border-radius:8px;border:1.5px solid var(--primary);background:#fff;color:var(--primary);font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s;}
+    .trend-export-btn:hover{background:var(--primary);color:#fff;}
     .trend-empty{text-align:center;color:#94a3b8;padding:40px 0;font-size:.9rem;}
     /* 統計摘要徽章 */
     .stats-summary-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem;}
@@ -321,9 +330,20 @@
           <div class="chart-card" id="trendCard">
             <div class="chart-card-title" style="justify-content:space-between;flex-wrap:wrap;gap:4px;">
               <span style="display:flex;align-items:center;gap:7px;"><span class="material-symbols-rounded" style="color:var(--success);">trending_up</span>月度完工趨勢（近12個月）</span>
-              <span id="trendOverall" style="font-size:.75rem;font-weight:600;color:var(--text-muted);"></span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span id="trendOverall" style="font-size:.75rem;font-weight:600;color:var(--text-muted);"></span>
+                <div class="trend-tab-bar" id="trendTabBar">
+                  <button class="trend-tab active" id="tabChart" onclick="switchTrendTab('chart')">
+                    <span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;">bar_chart</span> 圖表
+                  </button>
+                  <button class="trend-tab" id="tabData" onclick="switchTrendTab('data')">
+                    <span class="material-symbols-rounded" style="font-size:14px;vertical-align:middle;">table_chart</span> 數據
+                  </button>
+                </div>
+              </div>
             </div>
             <div id="trendChartWrap"></div>
+            <div id="trendDataWrap" style="display:none;"></div>
           </div>
         </div>
       </div>
@@ -1238,18 +1258,7 @@ function renderOpLog(){
   const filtered=allOpLogs.filter(l=>(!t||l.opType===t)&&(!br||l.branch===br)&&(!q||l.username.toLowerCase().includes(q)||l.displayName.toLowerCase().includes(q)||l.target.toLowerCase().includes(q)));
   const tc={'登入':'op-login','新增維護':'op-add','編輯維護':'op-edit','刪除維護':'op-delete','完工申報':'op-done','取消完工':'op-done','修改密碼':'op-edit','新增帳號':'op-add','編輯帳號':'op-edit','刪除帳號':'op-delete','新增產品線':'op-add','新增日誌':'op-add','編輯日誌':'op-edit','刪除日誌':'op-delete'};
   if(filtered.length===0){document.getElementById('opLogContent').innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8;">尚無紀錄</div>';return;}
-  document.getElementById('opLogContent').innerHTML=`<table class="op-table">
-    <colgroup><col class="c-time"><col class="c-user"><col class="c-name"><col class="c-branch"><col class="c-type"><col class="c-target"><col class="c-detail"></colgroup>
-    <thead><tr><th>時間</th><th>帳號</th><th>姓名</th><th>分公司</th><th>類型</th><th>對象</th><th>詳情</th></tr></thead>
-    <tbody>${filtered.map(l=>`<tr>
-      <td style="white-space:nowrap;">${l.time}</td>
-      <td style="white-space:nowrap;">${l.username}</td>
-      <td style="white-space:nowrap;">${l.displayName}</td>
-      <td style="white-space:nowrap;"><span class="branch-badge ${l.branch==='TN'?'branch-tn':'branch-kh'}" style="font-size:10px;">${l.branch||'KH'}</span></td>
-      <td style="white-space:nowrap;"><span class="op-type-chip ${tc[l.opType]||''}">${l.opType}</span></td>
-      <td class="c-target">${l.target}</td>
-      <td class="c-detail">${l.detail}</td>
-    </tr>`).join('')}</tbody></table>`;
+  document.getElementById('opLogContent').innerHTML=`<table class="op-table"><thead><tr><th>時間</th><th>帳號</th><th>姓名</th><th>分公司</th><th>類型</th><th>對象</th><th>詳情</th></tr></thead><tbody>${filtered.map(l=>`<tr><td>${l.time}</td><td>${l.username}</td><td>${l.displayName}</td><td><span class="branch-badge ${l.branch==='TN'?'branch-tn':'branch-kh'}" style="font-size:10px;">${l.branch||'KH'}</span></td><td><span class="op-type-chip ${tc[l.opType]||''}">${l.opType}</span></td><td>${l.target}</td><td style="color:var(--text-muted);">${l.detail}</td></tr>`).join('')}</tbody></table>`;
 }
 document.getElementById('opLogSearch').oninput=renderOpLog;
 document.getElementById('opTypeFilter').onchange=renderOpLog;
@@ -1469,6 +1478,11 @@ function renderStats(data) {
   renderExpiryList(expiryItems);
   if (!salesOnly) {
     renderEngBar(data.engineerLoad || [], data.totalRecords || 0, data.dataFrom || '', data.dataTo || '');
+    // 重置 tab 回圖表
+    document.getElementById('tabChart').classList.add('active');
+    document.getElementById('tabData').classList.remove('active');
+    document.getElementById('trendChartWrap').style.display = '';
+    document.getElementById('trendDataWrap').style.display  = 'none';
     renderTrendChart(data.monthlyTrend || []);
   }
 }
@@ -1524,6 +1538,7 @@ function renderEngBar(list, total, dataFrom, dataTo) {
 
 // ③ 月度完工趨勢折線圖（純 SVG + HTML tooltip）
 function renderTrendChart(data) {
+  _trendData = data;   // 儲存供數據表與匯出使用
   const wrap = document.getElementById('trendChartWrap');
   if (!data.length) { wrap.innerHTML = '<div class="trend-empty">尚無歷史月份資料</div>'; return; }
 
@@ -1593,7 +1608,8 @@ function renderTrendChart(data) {
     const colW = n > 1 ? cW / (n - 1) : cW;
     return `<rect class="trend-hit" x="${x - colW/2}" y="${PT}" width="${colW}" height="${cH}"
               fill="transparent" data-idx="${i}"
-              data-ym="${d.ym}" data-done="${d.done}" data-total="${d.total}" data-rate="${d.total>0?d.rate:'-'}"/>`;
+              data-ym="${d.ym}" data-done="${d.done}" data-total="${d.total}"
+              data-deferred="${d.deferred||0}" data-rate="${d.total>0?d.rate:'-'}"/>`;
   }).join('');
 
   // 圖例
@@ -1650,11 +1666,15 @@ function renderTrendChart(data) {
     const done  = d.dataset.done;
     const total = d.dataset.total;
     const ym    = d.dataset.ym;
+    const deferred = d.dataset.deferred || 0;
+    const pending  = Math.max(0, parseInt(total) - parseInt(done) - parseInt(deferred));
     tip.innerHTML =
       `<div style="font-weight:700;margin-bottom:3px;">${ym.slice(0,4)} 年 ${ym.slice(5)} 月</div>` +
       `<div>需維護：<b>${total}</b> 筆</div>` +
       `<div>已完工：<b style="color:#6ee7b7;">${done}</b> 筆</div>` +
-      `<div>完工率：<b style="color:#34d399;">${rate}</b></div>`;
+      `<div>暫緩中：<b style="color:#fcd34d;">${deferred}</b> 筆</div>` +
+      `<div>待執行：<b style="color:#94a3b8;">${pending}</b> 筆</div>` +
+      `<div>完成率：<b style="color:#34d399;">${rate}</b></div>`;
     tip.style.display = 'block';
     // 定位：預設在右上方，靠邊時翻轉
     const tipW = tip.offsetWidth  || 140;
@@ -1673,6 +1693,117 @@ function renderTrendChart(data) {
     el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
   });
 }
+
+// ====== 月度完工趨勢：數據切換 ======
+let _trendData = [];   // 快取最新資料供切換與匯出使用
+
+function switchTrendTab(tab) {
+  document.getElementById('tabChart').classList.toggle('active', tab === 'chart');
+  document.getElementById('tabData').classList.toggle('active', tab === 'data');
+  document.getElementById('trendChartWrap').style.display = tab === 'chart' ? '' : 'none';
+  document.getElementById('trendDataWrap').style.display  = tab === 'data'  ? '' : 'none';
+  if (tab === 'data') renderTrendDataTable(_trendData);
+}
+
+function renderTrendDataTable(data) {
+  const wrap = document.getElementById('trendDataWrap');
+  if (!data || !data.length) {
+    wrap.innerHTML = '<div class="trend-empty">尚無月份資料</div>';
+    return;
+  }
+
+  // 合計列
+  const totTotal    = data.reduce((s,d) => s + d.total,    0);
+  const totDone     = data.reduce((s,d) => s + d.done,     0);
+  const totDeferred = data.reduce((s,d) => s + (d.deferred||0), 0);
+  const totPending  = data.reduce((s,d) => s + (d.pending!=null ? d.pending : (d.total-d.done-(d.deferred||0))), 0);
+  const totCancelled= data.reduce((s,d) => s + (d.cancelled||0), 0);
+  const totRate     = totTotal > 0 ? Math.round(totDone/totTotal*100) : 0;
+  const totDeferRate= totTotal > 0 ? Math.round(totDeferred/totTotal*100) : 0;
+
+  const rows = data.map(d => {
+    const pending  = d.pending != null ? d.pending : (d.total - d.done - (d.deferred||0));
+    const ymLabel  = d.ym.slice(0,4) + '年' + parseInt(d.ym.slice(5)) + '月';
+    return `<tr>
+      <td>${ymLabel}</td>
+      <td class="cell-total">${d.total}</td>
+      <td class="cell-done">${d.done}</td>
+      <td class="cell-deferred">${d.deferred||0}</td>
+      <td class="cell-pending">${pending < 0 ? 0 : pending}</td>
+      <td class="cell-rate">${d.rate}%</td>
+      <td class="cell-deferred" style="font-size:.8rem;">${d.deferRate!=null?d.deferRate:0}%</td>
+      <td style="color:#94a3b8;font-size:.8rem;">${d.cancelled||0}</td>
+    </tr>`;
+  }).join('');
+
+  const sumRow = `<tr>
+    <td>合計 / 平均</td>
+    <td class="cell-total">${totTotal}</td>
+    <td class="cell-done">${totDone}</td>
+    <td class="cell-deferred">${totDeferred}</td>
+    <td class="cell-pending">${totPending < 0 ? 0 : totPending}</td>
+    <td class="cell-rate">${totRate}%</td>
+    <td class="cell-deferred" style="font-size:.8rem;">${totDeferRate}%</td>
+    <td style="color:#94a3b8;font-size:.8rem;">${totCancelled}</td>
+  </tr>`;
+
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
+      <button class="trend-export-btn" onclick="exportTrendCsv()">
+        <span class="material-symbols-rounded" style="font-size:15px;">download</span>匯出 CSV
+      </button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="trend-data-table">
+        <thead><tr>
+          <th>月份</th>
+          <th title="該月排定需維護的總筆數">需維護</th>
+          <th title="已完工筆數">已完工 ✅</th>
+          <th title="申報暫緩筆數">暫緩 ⏸</th>
+          <th title="尚未完工也非暫緩">待執行</th>
+          <th title="完工率 = 已完工 ÷ 需維護">完成率</th>
+          <th title="暫緩率 = 暫緩 ÷ 需維護">暫緩率</th>
+          <th title="該月被取消申報的次數">取消次數</th>
+        </tr></thead>
+        <tbody>${rows}${sumRow}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:8px;font-size:.75rem;color:var(--text-muted);">
+      ＊待執行 = 需維護 − 已完工 − 暫緩；取消次數為同月被取消申報的操作次數（含多次取消）
+    </div>`;
+}
+
+function exportTrendCsv() {
+  const data = _trendData;
+  if (!data || !data.length) return;
+
+  const headers = ['月份','需維護（筆）','已完工（筆）','暫緩（筆）','待執行（筆）','完成率(%)','暫緩率(%)','取消申報次數'];
+  const rows = data.map(d => {
+    const pending   = d.pending != null ? d.pending : (d.total - d.done - (d.deferred||0));
+    const ymLabel   = d.ym.slice(0,4) + '年' + parseInt(d.ym.slice(5)) + '月';
+    return [ymLabel, d.total, d.done, d.deferred||0, Math.max(0,pending), d.rate, d.deferRate||0, d.cancelled||0];
+  });
+  const totTotal    = data.reduce((s,d) => s + d.total,    0);
+  const totDone     = data.reduce((s,d) => s + d.done,     0);
+  const totDeferred = data.reduce((s,d) => s + (d.deferred||0), 0);
+  const totPending  = data.reduce((s,d) => s + (d.pending!=null?d.pending:(d.total-d.done-(d.deferred||0))), 0);
+  const totCancelled= data.reduce((s,d) => s + (d.cancelled||0), 0);
+  rows.push(['合計 / 平均', totTotal, totDone, totDeferred, Math.max(0,totPending),
+    totTotal>0?Math.round(totDone/totTotal*100):0,
+    totTotal>0?Math.round(totDeferred/totTotal*100):0,
+    totCancelled]);
+
+  const bom = '\uFEFF';
+  const csv = bom + [headers, ...rows].map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `月度完工趨勢_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ====== 統計分析結束 ======
 
 
